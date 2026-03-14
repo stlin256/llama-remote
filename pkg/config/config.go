@@ -32,7 +32,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
 			Host: "0.0.0.0",
-			Port: 8080,
+			Port: 8000,
 		},
 		Paths: PathsConfig{
 			LlamaBin: "",

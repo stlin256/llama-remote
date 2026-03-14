@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"embed"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -27,6 +29,10 @@ import (
 var assets embed.FS
 
 func main() {
+	// 命令行参数
+	port := flag.Int("port", 0, "HTTP server port (default from config)")
+	flag.Parse()
+
 	// 加载配置
 	cfg, err := config.Load()
 	if err != nil {
@@ -118,8 +124,43 @@ func main() {
 	// WebSocket
 	r.HandleFunc("/ws", wsMgr.Handle)
 
-	// 前端静态文件
-	r.PathPrefix("/").Handler(http.FileServer(http.FS(assets)))
+	// 前端静态文件 (SPA支持)
+	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+
+		// 去除前导斜杠
+		path = strings.TrimPrefix(path, "/")
+
+		// embed的FS是相对于dist目录的
+		embedPath := "dist/" + path
+
+		// 检查文件是否存在
+		_, err := assets.Open(embedPath)
+		if err != nil {
+			// 文件不存在，返回index.html (SPA路由)
+			embedPath = "dist/index.html"
+		}
+
+		data, err := assets.ReadFile(embedPath)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+
+		// 设置正确的Content-Type
+		switch {
+		case strings.HasSuffix(path, ".html"):
+			w.Header().Set("Content-Type", "text/html")
+		case strings.HasSuffix(path, ".js"):
+			w.Header().Set("Content-Type", "application/javascript")
+		case strings.HasSuffix(path, ".css"):
+			w.Header().Set("Content-Type", "text/css")
+		case strings.HasSuffix(path, ".svg"):
+			w.Header().Set("Content-Type", "image/svg+xml")
+		}
+
+		w.Write(data)
+	})
 
 	// CORS
 	cors := handlers.CORS(
@@ -129,7 +170,11 @@ func main() {
 	)
 
 	// 创建服务器
-	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+	serverPort := cfg.Server.Port
+	if *port > 0 {
+		serverPort = *port
+	}
+	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, serverPort)
 	server := &http.Server{
 		Addr:         addr,
 		Handler:      cors(r),
