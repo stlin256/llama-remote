@@ -12,7 +12,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     const error = await response.text()
     throw new Error(error || `HTTP ${response.status}`)
   }
-  return response.json()
+  const text = await response.text()
+  if (!text) {
+    return {} as T
+  }
+  return JSON.parse(text)
 }
 
 export const api = {
@@ -75,6 +79,9 @@ export const api = {
   }),
   deletePrompt: (name: string) => request(`/api/prompts?name=${encodeURIComponent(name)}`, {
     method: 'DELETE',
+  }),
+  clearPrompts: () => request('/api/prompts/clear', {
+    method: 'POST',
   }),
 
   // GPU

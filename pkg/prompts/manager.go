@@ -3,6 +3,7 @@ package prompts
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -10,9 +11,9 @@ import (
 )
 
 type PromptTemplate struct {
-	Name        string              `yaml:"name"`
-	Content     string              `yaml:"content"`
-	Variables   []PromptVariable    `yaml:"variables,omitempty"`
+	Name        string              `yaml:"name" json:"name"`
+	Content     string              `yaml:"content" json:"content"`
+	Variables   []PromptVariable    `yaml:"variables,omitempty" json:"variables,omitempty"`
 }
 
 type PromptVariable struct {
@@ -125,18 +126,46 @@ func (m *Manager) HandleDelete() http.HandlerFunc {
 			return
 		}
 
-		for i, p := range prompts {
-			if p.Name == name {
-				prompts = append(prompts[:i], prompts[i+1:]...)
-				break
-			}
+		// 解码URL编码的名称
+		decodedName, err := url.QueryUnescape(name)
+		if err != nil {
+			decodedName = name
 		}
 
-		if err := m.save(prompts); err != nil {
+		// 查找要删除的提示词
+		found := false
+		newPrompts := make([]PromptTemplate, 0, len(prompts))
+		for _, p := range prompts {
+			if p.Name == decodedName || p.Name == name {
+				found = true
+				continue // 跳过要删除的项
+			}
+			newPrompts = append(newPrompts, p)
+		}
+
+		if !found {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "prompt not found"})
+			return
+		}
+
+		if err := m.save(newPrompts); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
 
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	}
+}
+
+// HandleClear 删除所有自定义提示词
+func (m *Manager) HandleClear() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := m.save([]PromptTemplate{}); err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	}

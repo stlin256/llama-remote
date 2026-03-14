@@ -131,7 +131,8 @@ func main() {
 	// 提示词模板API
 	api.HandleFunc("/prompts", promptMgr.HandleList()).Methods("GET")
 	api.HandleFunc("/prompts", promptMgr.HandleSave()).Methods("POST")
-	api.HandleFunc("/prompts/{name}", promptMgr.HandleDelete()).Methods("DELETE")
+	api.HandleFunc("/prompts", promptMgr.HandleDelete()).Methods("DELETE")
+	api.HandleFunc("/prompts/clear", promptMgr.HandleClear()).Methods("POST")
 
 	// GPU状态API
 	api.HandleFunc("/gpu", gpuMonitor.HandleGet()).Methods("GET")
