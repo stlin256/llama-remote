@@ -216,7 +216,7 @@ func (m *Manager) Start(id string) error {
 	}
 
 	if fa, ok := inst.Params["flash_attention"].(bool); ok && fa {
-		args = append(args, "-fa")
+		args = append(args, "--flash-attn", "on")
 	}
 
 	if mlock, ok := inst.Params["mlock"].(bool); ok && mlock {

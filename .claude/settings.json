@@ -17,7 +17,9 @@
       "Bash(curl -s http://realpics.cn:5002/)",
       "Bash(go run:*)",
       "Bash(rm -rf \"c:\\\\Users\\\\B450M\\\\Documents\\\\project\\\\llama_remote\\\\cmd\\\\server\\\\dist\")",
-      "Bash(cp -r \"c:\\\\Users\\\\B450M\\\\Documents\\\\project\\\\llama_remote\\\\web\\\\dist\" \"c:\\\\Users\\\\B450M\\\\Documents\\\\project\\\\llama_remote\\\\cmd\\\\server\\\\dist\")"
+      "Bash(cp -r \"c:\\\\Users\\\\B450M\\\\Documents\\\\project\\\\llama_remote\\\\web\\\\dist\" \"c:\\\\Users\\\\B450M\\\\Documents\\\\project\\\\llama_remote\\\\cmd\\\\server\\\\dist\")",
+      "Bash(curl -s http://realpics.cn:5002/api/instances)",
+      "Bash(curl -s -X POST http://realpics.cn:5002/api/instances/067a7923-56c0-4e8b-901c-33fb49a0f180/start)"
     ]
   }
 }
