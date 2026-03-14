@@ -224,6 +224,24 @@ select.input {
   padding-bottom: 4px;
 }
 
+/* Nav items - WIN98 sidebar style */
+.nav-item {
+  background: var(--win-gray);
+  border: 2px solid;
+  border-color: var(--win-white) var(--win-gray-dark) var(--win-gray-dark) var(--win-white);
+  color: var(--win-black);
+}
+
+.nav-item:hover {
+  background: var(--win-gray-light);
+}
+
+.nav-item.active {
+  background: var(--win-blue);
+  color: var(--win-white);
+  border-color: var(--win-blue-light) var(--win-blue) var(--win-blue) var(--win-blue-light);
+}
+
 /* Status indicators */
 .status-dot {
   display: inline-block;

@@ -1,24 +1,19 @@
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard,
   Server,
-  FolderOpen,
-  FileText,
-  ScrollText,
-  Settings,
   Cpu,
 } from 'lucide-react'
 import { useStore } from '../store'
 import { api, createWebSocket } from '../hooks/api'
 
 const navItems = [
-  { path: '/dashboard', icon: LayoutDashboard, label: '仪表盘' },
-  { path: '/instances', icon: Server, label: '实例' },
-  { path: '/models', icon: FolderOpen, label: '模型' },
-  { path: '/templates', icon: FileText, label: '模板' },
-  { path: '/logs', icon: ScrollText, label: '日志' },
-  { path: '/settings', icon: Settings, label: '设置' },
+  { path: '/dashboard', label: '仪表盘' },
+  { path: '/instances', label: '实例' },
+  { path: '/models', label: '模型' },
+  { path: '/templates', label: '模板' },
+  { path: '/logs', label: '日志' },
+  { path: '/settings', label: '设置' },
 ]
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -26,7 +21,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, instances } = useStore()
 
   useEffect(() => {
-    // 加载初始数据
     const loadData = async () => {
       try {
         const [config, insts, models, templates, prompts, gpu] = await Promise.all([
@@ -51,7 +45,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    // WebSocket连接
     const ws = createWebSocket((data) => {
       switch (data.type) {
         case 'stats':
@@ -71,57 +64,93 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="desktop">
-      {/* Desktop icons */}
-      <div style={{ position: 'absolute', top: 16, left: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className="flex flex-col items-center"
-            style={{ width: 64, cursor: 'pointer', color: 'white', textDecoration: 'none' }}
-          >
-            <item.icon size={32} style={{ filter: 'drop-shadow(1px 1px 0 #000)' }} />
-            <span style={{ fontSize: 11, textAlign: 'center', textShadow: '1px 1px 0 #000', marginTop: 4 }}>
-              {item.label}
-            </span>
-          </NavLink>
-        ))}
-      </div>
-
-      {/* Main window */}
+      {/* Main window - left sidebar style */}
       <div
         className="window"
-        style={{ top: 40, left: 100, right: 20, bottom: 40, minWidth: 600, minHeight: 400 }}
+        style={{ top: 20, left: 20, right: 20, bottom: 40, minWidth: 700, minHeight: 450 }}
       >
         <div className="title-bar">
-          <span>Llama Remote</span>
+          <span>Llama Remote - 控制面板</span>
           <div className="title-bar-buttons">
             <div className="title-bar-btn">_</div>
             <div className="title-bar-btn">X</div>
           </div>
         </div>
-        <div className="window-body">
-          {/* Tab bar */}
-          <div className="tabs" style={{ marginBottom: 8 }}>
+        <div className="window-body" style={{ display: 'flex', padding: 0 }}>
+          {/* Left sidebar - WIN98 banner style */}
+          <div style={{
+            width: 160,
+            background: 'var(--win-gray)',
+            borderRight: '2px solid var(--win-gray-dark)',
+            padding: 8,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4
+          }}>
+            {/* Logo banner */}
+            <div style={{
+              background: 'var(--win-blue)',
+              color: 'white',
+              padding: 8,
+              marginBottom: 8,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}>
+              <Cpu size={24} />
+              <div>
+                <div style={{ fontWeight: 'bold', fontSize: 12 }}>Llama</div>
+                <div style={{ fontWeight: 'bold', fontSize: 12 }}>Remote</div>
+              </div>
+            </div>
+
+            {/* Navigation items - vertical */}
             {navItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}
+                className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
+                style={{
+                  display: 'block',
+                  padding: '6px 8px',
+                  textDecoration: 'none',
+                  fontSize: 11,
+                  cursor: 'pointer',
+                }}
               >
                 {item.label}
               </NavLink>
             ))}
           </div>
-          {/* Content */}
-          <div style={{ background: 'var(--win-white)', border: '2px solid inset', padding: 8, minHeight: 300 }}>
-            {children}
+
+          {/* Right content area */}
+          <div style={{ flex: 1, padding: 8, overflow: 'auto' }}>
+            <div style={{
+              background: 'var(--win-white)',
+              border: '2px solid var(--win-gray-dark)',
+              borderRightColor: 'var(--win-black)',
+              borderBottomColor: 'var(--win-black)',
+              padding: 8,
+              minHeight: '100%',
+              overflow: 'auto'
+            }}>
+              {children}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Status bar */}
-      <div style={{ background: 'var(--win-gray)', border: '2px solid', borderColor: 'var(--win-gray-dark) var(--win-white) var(--win-white) var(--win-gray-dark)', padding: '2px 8px', marginBottom: 4, display: 'flex', gap: 16, fontSize: 11 }}>
+      <div style={{
+        background: 'var(--win-gray)',
+        border: '2px solid',
+        borderColor: 'var(--win-gray-dark) var(--win-white) var(--win-white) var(--win-gray-dark)',
+        padding: '2px 8px',
+        marginBottom: 4,
+        display: 'flex',
+        gap: 16,
+        fontSize: 11
+      }}>
         <span>就绪</span>
         <span>{runningCount} 实例运行中</span>
       </div>
@@ -129,8 +158,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Taskbar */}
       <div className="taskbar">
         <div className="start-button">
-          <div style={{ width: 16, height: 16, background: 'var(--win-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Cpu size={12} color="white" />
+          <div style={{
+            width: 16,
+            height: 16,
+            background: 'var(--win-blue)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 10,
+            marginRight: 4
+          }}>
+            <Cpu size={10} color="white" />
           </div>
           Start
         </div>
