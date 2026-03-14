@@ -13,20 +13,24 @@ import (
 	"github.com/llama-remote/server/pkg/websocket"
 
 	"github.com/google/uuid"
+	"gopkg.in/yaml.v3"
 )
 
 type Instance struct {
-	ID             string            `yaml:"id"`
-	Name           string            `yaml:"name"`
-	LlamaBin       string            `yaml:"llama_bin"`
-	Model          string            `yaml:"model"`
-	Mmproj         string            `yaml:"mmproj"`
+	ID             string                 `yaml:"id"`
+	Name           string                 `yaml:"name"`
+	Model          string                 `yaml:"model"`
+	Mmproj         string                 `yaml:"mmproj"`
 	Params         map[string]interface{} `yaml:"params"`
-	PromptTemplate string            `yaml:"prompt_template"`
-	Status         string            `yaml:"status"` // stopped, starting, running, error
-	PID            int               `yaml:"-"`
-	LogFile        string            `yaml:"-"`
-	Port           int               `yaml:"port"`
+	PromptTemplate string                 `yaml:"prompt_template"`
+	Status         string                 `yaml:"status"`
+	Port           int                    `yaml:"port"`
+	PID            int                    `yaml:"-"`
+	LogFile        string                 `yaml:"-"`
+}
+
+type InstanceData struct {
+	Instances []Instance `yaml:"instances"`
 }
 
 type Manager struct {
@@ -34,6 +38,7 @@ type Manager struct {
 	instances  map[string]*Instance
 	mu         sync.RWMutex
 	logManager *logs.Manager
+	dataFile   string
 }
 
 func NewManager(cfg *config.Config, logManager *logs.Manager) *Manager {
@@ -41,19 +46,50 @@ func NewManager(cfg *config.Config, logManager *logs.Manager) *Manager {
 		cfg:        cfg,
 		instances:  make(map[string]*Instance),
 		logManager: logManager,
+		dataFile:   filepath.Join(cfg.DataDir, "instances.yaml"),
 	}
 	m.loadInstances()
 	return m
 }
 
 func (m *Manager) loadInstances() {
-	// 加载已保存的实例配置
-	// TODO: 从文件加载
+	data, err := os.ReadFile(m.dataFile)
+	if err != nil {
+		// 文件不存在或读取失败，使用空列表
+		return
+	}
+
+	var instanceData InstanceData
+	if err := yaml.Unmarshal(data, &instanceData); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to load instances: %v\n", err)
+		return
+	}
+
+	for i := range instanceData.Instances {
+		inst := &instanceData.Instances[i]
+		inst.Status = "stopped"
+		m.instances[inst.ID] = inst
+	}
 }
 
 func (m *Manager) saveInstances() {
-	// 保存实例配置到文件
-	// TODO: 保存到文件
+	instanceData := InstanceData{
+		Instances: make([]Instance, 0, len(m.instances)),
+	}
+
+	for _, inst := range m.instances {
+		instanceData.Instances = append(instanceData.Instances, *inst)
+	}
+
+	data, err := yaml.Marshal(instanceData)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to marshal instances: %v\n", err)
+		return
+	}
+
+	if err := os.WriteFile(m.dataFile, data, 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to save instances: %v\n", err)
+	}
 }
 
 func (m *Manager) List() []*Instance {
@@ -135,15 +171,14 @@ func (m *Manager) Start(id string) error {
 	inst.Status = "starting"
 	m.mu.Unlock()
 
+	// 使用配置的llama-server路径
+	llamaBin := m.cfg.Paths.LlamaBin
+	if llamaBin == "" {
+		return fmt.Errorf("llama.cpp binary not configured in settings")
+	}
+
 	// 构建命令行参数
 	args := []string{}
-	if inst.LlamaBin != "" {
-		// 使用实例指定的llama-server
-	} else if m.cfg.Paths.LlamaBin != "" {
-		inst.LlamaBin = m.cfg.Paths.LlamaBin
-	} else {
-		return fmt.Errorf("llama.cpp binary not configured")
-	}
 
 	// 添加模型参数
 	if inst.Model != "" {
@@ -156,15 +191,13 @@ func (m *Manager) Start(id string) error {
 	}
 
 	// 添加其他参数
-	if port, ok := inst.Params["port"].(float64); ok {
-		inst.Port = int(port)
-		args = append(args, "--port", fmt.Sprintf("%d", int(port)))
-	} else {
-		inst.Port = 8080
-		args = append(args, "--port", "8080")
+	port := inst.Port
+	if port <= 0 {
+		port = 5000
 	}
+	args = append(args, "--port", fmt.Sprintf("%d", port))
 
-	if host, ok := inst.Params["host"].(string); ok {
+	if host, ok := inst.Params["host"].(string); ok && host != "" {
 		args = append(args, "--host", host)
 	} else {
 		args = append(args, "--host", "0.0.0.0")
@@ -194,7 +227,7 @@ func (m *Manager) Start(id string) error {
 		args = append(args, "--no-mmap")
 	}
 
-	if batchSize, ok := inst.Params["batch_size"].(float64); ok {
+	if batchSize, ok := inst.Params["batch_size"].(float64); ok && batchSize > 0 {
 		args = append(args, "-b", fmt.Sprintf("%d", int(batchSize)))
 	}
 
@@ -206,11 +239,12 @@ func (m *Manager) Start(id string) error {
 	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		inst.Status = "error"
+		m.saveInstances()
 		return fmt.Errorf("failed to open log file: %w", err)
 	}
 
 	// 创建命令
-	cmd := exec.Command(inst.LlamaBin, args...)
+	cmd := exec.Command(llamaBin, args...)
 	cmd.Stdout = f
 	cmd.Stderr = f
 
@@ -218,6 +252,7 @@ func (m *Manager) Start(id string) error {
 	if err := cmd.Start(); err != nil {
 		f.Close()
 		inst.Status = "error"
+		m.saveInstances()
 		return fmt.Errorf("failed to start llama-server: %w", err)
 	}
 
@@ -228,8 +263,7 @@ func (m *Manager) Start(id string) error {
 	m.instances[inst.ID] = inst
 	m.mu.Unlock()
 
-	// 启动日志读取协程
-	go m.readLog(inst, f)
+	// 关闭日志文件
 	f.Close()
 
 	// 等待服务真正启动
@@ -238,16 +272,12 @@ func (m *Manager) Start(id string) error {
 	// 检查进程是否还在运行
 	if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
 		inst.Status = "error"
+		m.saveInstances()
 		return fmt.Errorf("llama-server exited unexpectedly")
 	}
 
 	m.saveInstances()
 	return nil
-}
-
-func (m *Manager) readLog(inst *Instance, f *os.File) {
-	// 读取日志文件并通过WebSocket推送
-	// 简化实现：定期读取新内容
 }
 
 func (m *Manager) Stop(id string) error {
@@ -295,13 +325,10 @@ func (m *Manager) WatchStatus(wsMgr *websocket.Manager) {
 		for _, inst := range m.instances {
 			if inst.Status == "running" && inst.PID > 0 {
 				proc, err := os.FindProcess(inst.PID)
-				if err != nil {
+				if err != nil || proc.Pid < 0 {
 					inst.Status = "error"
 					wsMgr.BroadcastInstanceStatus(inst.ID, "error")
-				} else if proc.Pid < 0 {
-					// Process doesn't exist
-					inst.Status = "error"
-					wsMgr.BroadcastInstanceStatus(inst.ID, "error")
+					m.saveInstances()
 				}
 			}
 		}
