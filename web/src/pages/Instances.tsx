@@ -10,7 +10,6 @@ export default function Instances() {
   const [editingInstance, setEditingInstance] = useState<Instance | null>(null)
   const [formData, setFormData] = useState<Partial<Instance>>({
     name: '',
-    llama_bin: '',
     model: '',
     mmproj: '',
     params: {
@@ -27,7 +26,6 @@ export default function Instances() {
     setEditingInstance(null)
     setFormData({
       name: '',
-      llama_bin: config?.paths.llama_bin || '',
       model: '',
       mmproj: '',
       params: {
@@ -192,13 +190,9 @@ export default function Instances() {
                 </div>
                 <div>
                   <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>llama-server路径</label>
-                  <input
-                    type="text"
-                    className="input"
-                    style={{ width: '100%', fontFamily: 'monospace', fontSize: 10 }}
-                    value={formData.llama_bin || ''}
-                    onChange={e => setFormData({ ...formData, llama_bin: e.target.value })}
-                  />
+                  <div className="input" style={{ background: 'var(--win-gray)', color: 'var(--win-gray-dark)', fontFamily: 'monospace', fontSize: 10 }}>
+                    从设置中读取: {config?.paths.llama_bin || '未配置'}
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>模型文件</label>
