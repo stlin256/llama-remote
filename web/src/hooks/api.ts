@@ -16,6 +16,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  // 认证
+  checkAuth: () => request<{ authenticated: boolean }>('/api/check'),
+  login: (password: string) => request<{ status: string }>('/api/login', {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  }),
+  logout: () => request<{ status: string }>('/api/logout', {
+    method: 'POST',
+  }),
+
   // 配置
   getConfig: () => request<any>('/api/config'),
   updateConfig: (config: any) => request('/api/config', {

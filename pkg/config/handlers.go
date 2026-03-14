@@ -15,6 +15,9 @@ type ConfigResponse struct {
 		ModelsDir  string `json:"models_dir"`
 		LogDir     string `json:"log_dir"`
 	} `json:"paths"`
+	Auth struct {
+		Enable bool `json:"enable"`
+	} `json:"auth"`
 }
 
 func HandleGet(cfg *Config) http.HandlerFunc {
@@ -25,6 +28,7 @@ func HandleGet(cfg *Config) http.HandlerFunc {
 		resp.Paths.LlamaBin = cfg.Paths.LlamaBin
 		resp.Paths.ModelsDir = cfg.Paths.ModelsDir
 		resp.Paths.LogDir = cfg.LogDir
+		resp.Auth.Enable = cfg.Auth.Enable
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
@@ -40,6 +44,10 @@ type UpdateRequest struct {
 		LlamaBin   string `json:"llama_bin"`
 		ModelsDir  string `json:"models_dir"`
 	} `json:"paths"`
+	Auth struct {
+		Enable   bool   `json:"enable"`
+		Password string `json:"password"`
+	} `json:"auth"`
 }
 
 func HandleUpdate(cfg *Config) http.HandlerFunc {
@@ -61,6 +69,12 @@ func HandleUpdate(cfg *Config) http.HandlerFunc {
 		}
 		if req.Paths.ModelsDir != "" {
 			cfg.Paths.ModelsDir = req.Paths.ModelsDir
+		}
+		if req.Auth.Enable {
+			cfg.Auth.Enable = req.Auth.Enable
+		}
+		if req.Auth.Password != "" {
+			cfg.Auth.Password = req.Auth.Password
 		}
 
 		if err := cfg.Save(); err != nil {

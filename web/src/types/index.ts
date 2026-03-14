@@ -68,6 +68,9 @@ export interface Config {
     models_dir: string
     log_dir: string
   }
+  auth?: {
+    enable: boolean
+  }
 }
 
 export interface LogMessage {

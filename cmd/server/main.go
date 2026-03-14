@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/llama-remote/server/pkg/auth"
 	"github.com/llama-remote/server/pkg/config"
 	"github.com/llama-remote/server/pkg/gpu"
 	"github.com/llama-remote/server/pkg/instance"
@@ -68,6 +69,9 @@ func main() {
 	// 初始化WebSocket管理器
 	wsMgr := websocket.NewManager()
 
+	// 初始化认证管理器
+	authMgr := auth.NewManager(cfg)
+
 	// 启动GPU监控
 	gpuMonitor.Start()
 	go func() {
@@ -85,8 +89,16 @@ func main() {
 	// 创建HTTP路由
 	r := mux.NewRouter()
 
-	// API路由
+	// 登录API (不需要认证) - 在主路由上
+	r.HandleFunc("/api/login", authMgr.HandleLogin()).Methods("POST")
+	r.HandleFunc("/api/logout", authMgr.HandleLogout()).Methods("POST")
+	r.HandleFunc("/api/check", authMgr.HandleCheck()).Methods("GET")
+
+	// 受保护的API路由
 	api := r.PathPrefix("/api").Subrouter()
+
+	// 应用认证中间件到受保护的API
+	api.Use(authMgr.Middleware)
 
 	// 配置API
 	api.HandleFunc("/config", config.HandleGet(cfg)).Methods("GET")

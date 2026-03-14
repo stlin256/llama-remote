@@ -231,6 +231,11 @@ func (m *Manager) Start(id string) error {
 		args = append(args, "-b", fmt.Sprintf("%d", int(batchSize)))
 	}
 
+	// 添加提示词模板参数
+	if inst.PromptTemplate != "" {
+		args = append(args, "--prompt-template", inst.PromptTemplate)
+	}
+
 	// 创建日志文件
 	logFile := filepath.Join(m.cfg.LogDir, fmt.Sprintf("%s.log", inst.ID))
 	inst.LogFile = logFile

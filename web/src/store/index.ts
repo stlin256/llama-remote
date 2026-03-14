@@ -6,6 +6,10 @@ interface AppState {
   config: Config | null
   setConfig: (config: Config) => void
 
+  // 认证
+  authenticated: boolean
+  setAuthenticated: (authenticated: boolean) => void
+
   // 实例
   instances: Instance[]
   setInstances: (instances: Instance[]) => void
@@ -41,6 +45,10 @@ export const useStore = create<AppState>((set) => ({
   // 配置
   config: null,
   setConfig: (config) => set({ config }),
+
+  // 认证
+  authenticated: false,
+  setAuthenticated: (authenticated) => set({ authenticated }),
 
   // 实例
   instances: [],

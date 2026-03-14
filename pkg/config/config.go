@@ -11,6 +11,7 @@ import (
 type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Paths    PathsConfig    `yaml:"paths"`
+	Auth     AuthConfig     `yaml:"auth"`
 	DataDir  string         `yaml:"-"`
 	LogDir   string         `yaml:"-"`
 }
@@ -25,6 +26,11 @@ type PathsConfig struct {
 	ModelsDir string `yaml:"models_dir"`
 }
 
+type AuthConfig struct {
+	Enable   bool   `yaml:"enable"`
+	Password string `yaml:"password"`
+}
+
 func DefaultConfig() *Config {
 	homeDir, _ := os.UserHomeDir()
 	dataDir := filepath.Join(homeDir, ".llama-remote")
@@ -37,6 +43,10 @@ func DefaultConfig() *Config {
 		Paths: PathsConfig{
 			LlamaBin: "",
 			ModelsDir: filepath.Join(homeDir, "models"),
+		},
+		Auth: AuthConfig{
+			Enable:   false,
+			Password: "",
 		},
 		DataDir: dataDir,
 		LogDir:  filepath.Join(dataDir, "logs"),
