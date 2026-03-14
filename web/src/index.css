@@ -155,6 +155,11 @@ body {
   font-size: 11px;
   cursor: pointer;
   min-width: 75px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
 .btn:active {
@@ -329,11 +334,39 @@ select.input {
   gap: 8px;
 }
 
+/* Modal Overlay - Win95 dark pattern */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Modal Window */
+.modal-window {
+  background: var(--win-gray);
+  border: 2px solid;
+  border-color: var(--win-white) var(--win-black) var(--win-black) var(--win-white);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+  min-width: 300px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Utilities */
 .flex { display: flex; }
 .flex-col { flex-direction: column; }
 .items-center { align-items: center; }
 .justify-between { justify-content: space-between; }
+.justify-end { justify-content: flex-end; }
 .gap-1 { gap: 4px; }
 .gap-2 { gap: 8px; }
 .gap-4 { gap: 16px; }
@@ -341,5 +374,6 @@ select.input {
 .p-4 { padding: 16px; }
 .mb-2 { margin-bottom: 8px; }
 .mb-4 { margin-bottom: 16px; }
+.mt-4 { margin-top: 16px; }
 .text-sm { font-size: 11px; }
 .font-bold { font-weight: bold; }

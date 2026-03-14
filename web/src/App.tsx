@@ -10,10 +10,14 @@ import Settings from './pages/Settings'
 import Login from './pages/Login'
 import { useStore } from './store'
 import { api } from './hooks/api'
+import { useConfirm } from './components/ConfirmDialog'
+import { useMessage } from './components/MessageDialog'
 
-function App() {
+function AppContent() {
   const { setConfig, authenticated, setAuthenticated } = useStore()
   const [loading, setLoading] = useState(true)
+  const { ConfirmDialog } = useConfirm()
+  const { MessageDialog } = useMessage()
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -57,6 +61,8 @@ function App() {
 
   return (
     <>
+      <ConfirmDialog />
+      <MessageDialog />
       <div className="bg-glow" />
       <Layout>
       <Routes>
@@ -71,6 +77,10 @@ function App() {
     </Layout>
     </>
   )
+}
+
+function App() {
+  return <AppContent />
 }
 
 export default App

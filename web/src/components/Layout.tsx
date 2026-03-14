@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useStore } from '../store'
 import { api, createWebSocket } from '../hooks/api'
+import { confirm } from '../components/ConfirmDialog'
 
 const navItems = [
   { path: '/dashboard', label: '仪表盘' },
@@ -18,7 +19,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, setSystemStats, setAuthenticated, instances } = useStore()
 
   const handleLogout = async () => {
-    if (confirm('确定要退出登录吗？')) {
+    if (await confirm('确定要退出登录吗？')) {
       await api.logout()
       setAuthenticated(false)
       navigate('/')

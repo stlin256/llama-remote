@@ -3,6 +3,9 @@ import { Plus, Play, Square, Trash2, Edit2, Server } from 'lucide-react'
 import { useStore } from '../store'
 import { api } from '../hooks/api'
 import type { Instance, ModelInfo } from '../types'
+import Modal from '../components/Modal'
+import { confirm } from '../components/ConfirmDialog'
+import { error } from '../components/MessageDialog'
 
 const DEFAULT_PARAMS = {
   ngl: 999,
@@ -130,13 +133,13 @@ export default function Instances() {
   const validateAndSubmit = async () => {
     // Validate instance name
     if (!formData.name || formData.name.trim() === '') {
-      alert('实例名称不能为空')
+      await error('实例名称不能为空')
       return
     }
 
     // Validate model
     if (!formData.model) {
-      alert('请选择模型')
+      await error('请选择模型')
       return
     }
 
@@ -162,7 +165,7 @@ export default function Instances() {
         updateInstance(editingInstance.id, finalData)
         // If instance was running, ask to restart
         if (editingInstance.status === 'running') {
-          if (confirm('实例正在运行，修改已保存。是否重新启动以应用更改？')) {
+          if (await confirm('实例正在运行，修改已保存。是否重新启动以应用更改？')) {
             await api.stopInstance(editingInstance.id)
             await api.startInstance(editingInstance.id)
             updateInstance(editingInstance.id, { status: 'starting' })
@@ -173,7 +176,7 @@ export default function Instances() {
         addInstance(created)
         setShowModal(false)
         // Ask to start the new instance
-        if (confirm('实例创建成功，是否立即启动？')) {
+        if (await confirm('实例创建成功，是否立即启动？')) {
           await api.startInstance(created.id)
           updateInstance(created.id, { status: 'starting' })
         }
@@ -181,17 +184,17 @@ export default function Instances() {
       }
       setShowModal(false)
     } catch (e) {
-      alert(`操作失败: ${e}`)
+      await error(`操作失败: ${e}`)
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确定要删除这个实例吗?')) return
+    if (!await confirm('确定要删除这个实例吗?')) return
     try {
       await api.deleteInstance(id)
       removeInstance(id)
     } catch (e) {
-      alert(`删除失败: ${e}`)
+      await error(`删除失败: ${e}`)
     }
   }
 
@@ -202,7 +205,7 @@ export default function Instances() {
       updateInstance(id, { status: 'running' })
     } catch (e) {
       updateInstance(id, { status: 'error' })
-      alert(`启动失败: ${e}`)
+      await error(`启动失败: ${e}`)
     }
   }
 
@@ -211,7 +214,7 @@ export default function Instances() {
       await api.stopInstance(id)
       updateInstance(id, { status: 'stopped' })
     } catch (e) {
-      alert(`停止失败: ${e}`)
+      await error(`停止失败: ${e}`)
     }
   }
 
@@ -227,8 +230,10 @@ export default function Instances() {
 
       {instances.length === 0 ? (
         <div className="panel" style={{ padding: 32, textAlign: 'center' }}>
-          <Server size={32} style={{ marginBottom: 8, opacity: 0.5 }} />
-          <p>暂无实例</p>
+          <div className="flex items-center justify-center" style={{ marginBottom: 8 }}>
+            <Server size={32} style={{ opacity: 0.5 }} />
+            <span style={{ marginLeft: 8 }}>暂无实例</span>
+          </div>
           <button onClick={openCreateModal} className="btn" style={{ marginTop: 8 }}>
             创建第一个实例
           </button>
@@ -288,189 +293,180 @@ export default function Instances() {
       )}
 
       {/* Modal */}
-      {showModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }} onClick={() => setShowModal(false)}>
-          <div className="window" style={{ width: 500, maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
-            <div className="title-bar">
-              <span>{editingInstance ? '编辑实例' : '新建实例'}</span>
-              <div className="title-bar-buttons">
-                <div className="title-bar-btn" onClick={() => setShowModal(false)}>X</div>
+      <Modal title={editingInstance ? '编辑实例' : '新建实例'} show={showModal} onClose={() => setShowModal(false)} width={500}>
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>实例名称 *</label>
+            <input
+              type="text"
+              className="input"
+              style={{ width: '100%' }}
+              value={formData.name || ''}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              placeholder="必填"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>模型文件 *</label>
+            <select
+              className="input"
+              style={{ width: '100%' }}
+              value={formData.model || ''}
+              onChange={e => handleModelChange(e.target.value)}
+            >
+              <option value="">选择模型...</option>
+              {models.map(m => (
+                <option key={m.path} value={m.path}>{m.name} ({formatSize(m.size)})</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Model Info */}
+          {selectedModel && (
+            <div className="panel" style={{ padding: 8 }}>
+              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>模型信息</div>
+              <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, fontSize: 10 }}>
+                <div>大小: {formatSize(selectedModel.size)}</div>
+                <div>路径: {selectedModel.path}</div>
+                {selectedModel.mmproj && <div>MMProj: 已配置</div>}
               </div>
             </div>
-            <div className="window-body">
-              <div className="flex flex-col gap-4">
-                <div>
-                  <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>实例名称 *</label>
-                  <input
-                    type="text"
-                    className="input"
-                    style={{ width: '100%' }}
-                    value={formData.name || ''}
-                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="必填"
-                  />
-                </div>
+          )}
 
-                <div>
-                  <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>模型文件 *</label>
-                  <select
-                    className="input"
-                    style={{ width: '100%' }}
-                    value={formData.model || ''}
-                    onChange={e => handleModelChange(e.target.value)}
-                  >
-                    <option value="">选择模型...</option>
-                    {models.map(m => (
-                      <option key={m.path} value={m.path}>{m.name} ({formatSize(m.size)})</option>
-                    ))}
-                  </select>
-                </div>
+          <div>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>MMProj (可选)</label>
+            <select
+              className="input"
+              style={{ width: '100%' }}
+              value={formData.mmproj || ''}
+              onChange={e => setFormData({ ...formData, mmproj: e.target.value })}
+            >
+              <option value="">无</option>
+              {models.filter(m => m.mmproj || m.path.includes('mmproj')).map(m => (
+                <option key={m.path} value={m.path}>{m.name}</option>
+              ))}
+            </select>
+          </div>
 
-                {/* Model Info */}
-                {selectedModel && (
-                  <div className="panel" style={{ padding: 8 }}>
-                    <div style={{ fontWeight: 'bold', marginBottom: 4 }}>模型信息</div>
-                    <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, fontSize: 10 }}>
-                      <div>大小: {formatSize(selectedModel.size)}</div>
-                      <div>路径: {selectedModel.path}</div>
-                      {selectedModel.mmproj && <div>MMProj: 已配置</div>}
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>MMProj (可选)</label>
-                  <select
-                    className="input"
-                    style={{ width: '100%' }}
-                    value={formData.mmproj || ''}
-                    onChange={e => setFormData({ ...formData, mmproj: e.target.value })}
-                  >
-                    <option value="">无</option>
-                    {models.filter(m => m.mmproj || m.path.includes('mmproj')).map(m => (
-                      <option key={m.path} value={m.path}>{m.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>提示词模板 (可选)</label>
-                  <select
-                    className="input"
-                    style={{ width: '100%' }}
-                    value={formData.prompt_template || ''}
-                    onChange={e => setFormData({ ...formData, prompt_template: e.target.value })}
-                  >
-                    <option value="">无</option>
-                    <option value={DEFAULT_PROMPT_TEMPLATE}>默认提示词 (强推理模型)</option>
-                  </select>
-                </div>
-
-                <div className="panel" style={{ marginTop: 8 }}>
-                  <h4 style={{ fontWeight: 'bold', marginBottom: 8 }}>启动参数</h4>
-                  <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                    <div>
-                      <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>GPU层</label>
-                      <input
-                        type="number"
-                        className="input"
-                        style={{ width: '100%' }}
-                        value={formData.params?.ngl ?? 999}
-                        onChange={e => setFormData({
-                          ...formData,
-                          params: { ...formData.params, ngl: parseInt(e.target.value) || 999 }
-                        })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>上下文</label>
-                      <input
-                        type="number"
-                        className="input"
-                        style={{ width: '100%' }}
-                        value={formData.params?.context ?? 8192}
-                        onChange={e => setFormData({
-                          ...formData,
-                          params: { ...formData.params, context: parseInt(e.target.value) || 8192 }
-                        })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>端口</label>
-                      <input
-                        type="number"
-                        className="input"
-                        style={{ width: '100%' }}
-                        value={formData.params?.port ?? 5000}
-                        onChange={e => setFormData({
-                          ...formData,
-                          params: { ...formData.params, port: parseInt(e.target.value) || 5000 }
-                        })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>线程</label>
-                      <input
-                        type="number"
-                        className="input"
-                        style={{ width: '100%' }}
-                        value={formData.params?.threads ?? ''}
-                        onChange={e => setFormData({
-                          ...formData,
-                          params: { ...formData.params, threads: parseInt(e.target.value) || undefined }
-                        })}
-                        placeholder="自动"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-4" style={{ marginTop: 8 }}>
-                    <label className="flex items-center gap-1">
-                      <input
-                        type="checkbox"
-                        checked={formData.params?.flash_attention ?? true}
-                        onChange={e => setFormData({
-                          ...formData,
-                          params: { ...formData.params, flash_attention: e.target.checked }
-                        })}
-                      />
-                      <span className="text-sm">Flash Attention</span>
-                    </label>
-                    <label className="flex items-center gap-1">
-                      <input
-                        type="checkbox"
-                        checked={formData.params?.mlock ?? false}
-                        onChange={e => setFormData({
-                          ...formData,
-                          params: { ...formData.params, mlock: e.target.checked }
-                        })}
-                      />
-                      <span className="text-sm">MLock</span>
-                    </label>
-                    <label className="flex items-center gap-1">
-                      <input
-                        type="checkbox"
-                        checked={formData.params?.['no-mmap'] ?? false}
-                        onChange={e => setFormData({
-                          ...formData,
-                          params: { ...formData.params, 'no-mmap': e.target.checked }
-                        })}
-                      />
-                      <span className="text-sm">No-MMAP</span>
-                    </label>
-                  </div>
-                </div>
+          <div>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>提示词模板 (可选)</label>
+            <select
+              className="input"
+              style={{ width: '100%' }}
+              value={formData.prompt_template || ''}
+              onChange={e => setFormData({ ...formData, prompt_template: e.target.value })}
+            >
+              <option value="">无</option>
+              <option value={DEFAULT_PROMPT_TEMPLATE}>默认提示词 (强推理模型)</option>
+            </select>
+            {formData.prompt_template && (
+              <div className="panel" style={{ marginTop: 8, padding: 8, maxHeight: 120, overflow: 'auto', fontSize: 10 }}>
+                <div style={{ fontWeight: 'bold', marginBottom: 4 }}>模板预览:</div>
+                <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{formData.prompt_template.slice(0, 500)}{formData.prompt_template.length > 500 ? '...' : ''}</pre>
               </div>
-              <div className="flex gap-2 justify-end" style={{ marginTop: 16 }}>
-                <button onClick={() => setShowModal(false)} className="btn">取消</button>
-                <button onClick={validateAndSubmit} className="btn btn-primary">保存</button>
+            )}
+          </div>
+
+          <div className="panel" style={{ marginTop: 8 }}>
+            <h4 style={{ fontWeight: 'bold', marginBottom: 8 }}>启动参数</h4>
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+              <div>
+                <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>GPU层</label>
+                <input
+                  type="number"
+                  className="input"
+                  style={{ width: '100%' }}
+                  value={formData.params?.ngl ?? 999}
+                  onChange={e => setFormData({
+                    ...formData,
+                    params: { ...formData.params, ngl: parseInt(e.target.value) || 999 }
+                  })}
+                />
               </div>
+              <div>
+                <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>上下文</label>
+                <input
+                  type="number"
+                  className="input"
+                  style={{ width: '100%' }}
+                  value={formData.params?.context ?? 8192}
+                  onChange={e => setFormData({
+                    ...formData,
+                    params: { ...formData.params, context: parseInt(e.target.value) || 8192 }
+                  })}
+                />
+              </div>
+              <div>
+                <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>端口</label>
+                <input
+                  type="number"
+                  className="input"
+                  style={{ width: '100%' }}
+                  value={formData.params?.port ?? 5000}
+                  onChange={e => setFormData({
+                    ...formData,
+                    params: { ...formData.params, port: parseInt(e.target.value) || 5000 }
+                  })}
+                />
+              </div>
+              <div>
+                <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>线程</label>
+                <input
+                  type="number"
+                  className="input"
+                  style={{ width: '100%' }}
+                  value={formData.params?.threads ?? ''}
+                  onChange={e => setFormData({
+                    ...formData,
+                    params: { ...formData.params, threads: parseInt(e.target.value) || undefined }
+                  })}
+                  placeholder="自动"
+                />
+              </div>
+            </div>
+            <div className="flex gap-4" style={{ marginTop: 8 }}>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={formData.params?.flash_attention ?? true}
+                  onChange={e => setFormData({
+                    ...formData,
+                    params: { ...formData.params, flash_attention: e.target.checked }
+                  })}
+                />
+                <span className="text-sm">Flash Attention</span>
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={formData.params?.mlock ?? false}
+                  onChange={e => setFormData({
+                    ...formData,
+                    params: { ...formData.params, mlock: e.target.checked }
+                  })}
+                />
+                <span className="text-sm">MLock</span>
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={formData.params?.['no-mmap'] ?? false}
+                  onChange={e => setFormData({
+                    ...formData,
+                    params: { ...formData.params, 'no-mmap': e.target.checked }
+                  })}
+                />
+                <span className="text-sm">No-MMAP</span>
+              </label>
             </div>
           </div>
         </div>
-      )}
+        <div className="flex gap-2 justify-end mt-4">
+          <button onClick={() => setShowModal(false)} className="btn">取消</button>
+          <button onClick={validateAndSubmit} className="btn btn-primary">保存</button>
+        </div>
+      </Modal>
     </div>
   )
 }

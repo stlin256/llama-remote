@@ -73,9 +73,9 @@ export default function Logs() {
         >
           {filteredLogs.length === 0 ? (
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--win-gray-dark)' }}>
-              <div className="text-center">
-                <ScrollText size={32} style={{ opacity: 0.5, marginBottom: 8 }} />
-                <p>暂无日志</p>
+              <div className="flex items-center">
+                <ScrollText size={32} style={{ opacity: 0.5 }} />
+                <span style={{ marginLeft: 8 }}>暂无日志</span>
               </div>
             </div>
           ) : (

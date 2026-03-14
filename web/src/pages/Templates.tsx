@@ -3,6 +3,9 @@ import { Plus, Trash2, FileText, Lock } from 'lucide-react'
 import { useStore } from '../store'
 import { api } from '../hooks/api'
 import type { PromptTemplate } from '../types'
+import Modal from '../components/Modal'
+import { confirm } from '../components/ConfirmDialog'
+import { success, error } from '../components/MessageDialog'
 
 const DEFAULT_PROMPT_TEMPLATE: PromptTemplate = {
   name: '默认提示词 (强推理模型)',
@@ -64,7 +67,7 @@ export default function Templates() {
 
   const handleSavePrompt = async () => {
     if (!promptForm.name || !promptForm.content) {
-      alert('请填写模板名称和内容')
+      await error('请填写模板名称和内容')
       return
     }
     try {
@@ -81,14 +84,14 @@ export default function Templates() {
       setPrompts(newPrompts)
       setShowPromptModal(false)
       setPromptForm({ name: '', content: '' })
-      alert('保存成功!')
+      await success('保存成功!')
     } catch (e) {
-      alert(`保存失败: ${e}\n请按F12打开控制台查看详情`)
+      await error(`保存失败: ${e}`)
     }
   }
 
   const handleDeletePrompt = async (name: string) => {
-    if (!confirm(`删除提示词模板 "${name}"?`)) return
+    if (!await confirm(`删除提示词模板 "${name}"?`)) return
     try {
       await api.deletePrompt(name)
       const result = await api.getPrompts()
@@ -98,30 +101,28 @@ export default function Templates() {
       } else {
         setPrompts([])
       }
-      alert('删除成功!')
+      await success('删除成功!')
     } catch (e) {
-      alert(`删除失败: ${e}\n请按F12打开控制台查看详情`)
+      await error(`删除失败: ${e}`)
     }
   }
 
   const handleClearAll = async () => {
-    if (!confirm('确定要删除所有自定义提示词吗?')) return
+    if (!await confirm('确定要删除所有自定义提示词吗?')) return
     try {
       await api.clearPrompts()
       setPrompts([])
-      alert('已清除所有自定义提示词!')
+      await success('已清除所有自定义提示词!')
     } catch (e) {
-      alert(`清除失败: ${e}`)
+      await error(`清除失败: ${e}`)
     }
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>模板管理</h2>
-
-      {/* Prompt Templates */}
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-end gap-2">
+      <div className="flex items-center justify-between">
+        <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>模板管理</h2>
+        <div className="flex gap-2">
           {promptList.length > 0 && (
             <button onClick={handleClearAll} className="btn" style={{ background: '#c0c0c0' }}>
               清空所有
@@ -138,6 +139,10 @@ export default function Templates() {
             新建模板
           </button>
         </div>
+      </div>
+
+      {/* Prompt Templates */}
+      <div className="flex flex-col gap-4">
 
         {/* Default Prompt Template - Read Only */}
         <div className="panel" style={{ padding: 8 }}>
@@ -167,8 +172,10 @@ export default function Templates() {
         {/* User-defined Prompt Templates */}
         {promptList.length === 0 ? (
           <div className="panel" style={{ padding: 32, textAlign: 'center' }}>
-            <FileText size={32} style={{ opacity: 0.5, marginBottom: 8 }} />
-            <p>暂无自定义提示词模板</p>
+            <div className="flex items-center justify-center" style={{ marginBottom: 8 }}>
+              <FileText size={32} style={{ opacity: 0.5 }} />
+              <span style={{ marginLeft: 8 }}>暂无自定义提示词模板</span>
+            </div>
           </div>
         ) : (
           <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
@@ -204,50 +211,35 @@ export default function Templates() {
       </div>
 
       {/* Prompt Modal */}
-      {showPromptModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }} onClick={() => setShowPromptModal(false)}>
-          <div className="window" style={{ width: 500 }} onClick={e => e.stopPropagation()}>
-            <div className="title-bar">
-              <span>新建提示词模板</span>
-              <div className="title-bar-buttons">
-                <div className="title-bar-btn" onClick={() => setShowPromptModal(false)}>X</div>
-              </div>
-            </div>
-            <div className="window-body">
-              <div className="flex flex-col gap-4">
-                <div>
-                  <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>模板名称</label>
-                  <input
-                    type="text"
-                    className="input"
-                    style={{ width: '100%' }}
-                    value={promptForm.name || ''}
-                    onChange={e => setPromptForm({ ...promptForm, name: e.target.value })}
-                    placeholder="代码助手"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>提示词内容</label>
-                  <textarea
-                    className="input"
-                    style={{ width: '100%', minHeight: 150, fontFamily: 'monospace', fontSize: 10 }}
-                    value={promptForm.content || ''}
-                    onChange={e => setPromptForm({ ...promptForm, content: e.target.value })}
-                    placeholder="你是一个专业的编程助手..."
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2" style={{ marginTop: 16 }}>
-                <button onClick={() => setShowPromptModal(false)} className="btn">取消</button>
-                <button onClick={handleSavePrompt} className="btn btn-primary">保存</button>
-              </div>
-            </div>
+      <Modal title="新建提示词模板" show={showPromptModal} onClose={() => setShowPromptModal(false)} width={500}>
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>模板名称</label>
+            <input
+              type="text"
+              className="input"
+              style={{ width: '100%' }}
+              value={promptForm.name || ''}
+              onChange={e => setPromptForm({ ...promptForm, name: e.target.value })}
+              placeholder="代码助手"
+            />
+          </div>
+          <div>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>提示词内容</label>
+            <textarea
+              className="input"
+              style={{ width: '100%', minHeight: 150, fontFamily: 'monospace', fontSize: 10 }}
+              value={promptForm.content || ''}
+              onChange={e => setPromptForm({ ...promptForm, content: e.target.value })}
+              placeholder="你是一个专业的编程助手..."
+            />
           </div>
         </div>
-      )}
+        <div className="flex justify-end gap-2 mt-4">
+          <button onClick={() => setShowPromptModal(false)} className="btn">取消</button>
+          <button onClick={handleSavePrompt} className="btn btn-primary">保存</button>
+        </div>
+      </Modal>
     </div>
   )
 }
