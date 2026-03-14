@@ -2,12 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Retro OS 90s Style */
 :root {
-  --primary: #6366f1;
-  --accent: #22d3ee;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --error: #ef4444;
+  --win-blue: #000080;
+  --win-blue-light: #1084d0;
+  --win-gray: #c0c0c0;
+  --win-gray-dark: #808080;
+  --win-gray-light: #dfdfdf;
+  --win-teal: #008080;
+  --win-black: #000000;
+  --win-white: #ffffff;
 }
 
 * {
@@ -17,188 +21,307 @@
 }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
-  background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+  font-family: 'MS Sans Serif', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--win-teal);
   min-height: 100vh;
-  color: #f8fafc;
+  overflow: hidden;
+  font-size: 12px;
 }
 
-/* 毛玻璃效果 */
-.glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+/* Desktop */
+.desktop {
+  background: var(--win-teal);
+  min-height: 100vh;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
 }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  transition: all 0.3s ease;
+/* Taskbar */
+.taskbar {
+  background: var(--win-gray);
+  border-top: 2px solid var(--win-white);
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
 }
 
-.glass-card:hover {
-  transform: scale(1.02);
-  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
-  border-color: rgba(99, 102, 241, 0.3);
+.start-button {
+  background: var(--win-gray);
+  border: 2px solid;
+  border-color: var(--win-white) var(--win-black) var(--win-black) var(--win-white);
+  padding: 2px 6px;
+  font-weight: bold;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
 }
 
-/* 滚动条 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+.start-button:active, .start-button.active {
+  border-color: var(--win-black) var(--win-white) var(--win-white) var(--win-black);
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+.taskbar-items {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+.taskbar-item {
+  background: var(--win-gray);
+  border: 1px solid;
+  border-color: var(--win-gray-dark) var(--win-white) var(--win-white) var(--win-gray-dark);
+  padding: 2px 8px;
+  cursor: pointer;
+  min-width: 100px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+.taskbar-item:active {
+  border-color: var(--win-white) var(--win-gray-dark) var(--win-gray-dark) var(--win-white);
 }
 
-/* 按钮样式 */
+.taskbar-item.active {
+  background: var(--win-white);
+  border-color: var(--win-gray-dark) var(--win-white) var(--win-white) var(--win-gray-dark);
+}
+
+.clock {
+  background: var(--win-gray);
+  border: 2px solid;
+  border-color: var(--win-gray-dark) var(--win-white) var(--win-white) var(--win-gray-dark);
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+/* Window */
+.window {
+  background: var(--win-gray);
+  border: 2px solid;
+  border-color: var(--win-white) var(--win-black) var(--win-black) var(--win-white);
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+}
+
+.title-bar {
+  background: var(--win-blue);
+  color: var(--win-white);
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.title-bar-buttons {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+
+.title-bar-btn {
+  background: var(--win-gray);
+  border: 1px solid;
+  border-color: var(--win-white) var(--win-black) var(--win-black) var(--win-white);
+  width: 16px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.title-bar-btn:active {
+  border-color: var(--win-black) var(--win-white) var(--win-white) var(--win-black);
+}
+
+.window-body {
+  padding: 8px;
+  flex: 1;
+  overflow: auto;
+}
+
+/* Buttons */
+.btn {
+  background: var(--win-gray);
+  border: 2px solid;
+  border-color: var(--win-white) var(--win-black) var(--win-black) var(--win-white);
+  padding: 4px 16px;
+  font-size: 11px;
+  cursor: pointer;
+  min-width: 75px;
+}
+
+.btn:active {
+  border-color: var(--win-black) var(--win-white) var(--win-white) var(--win-black);
+  padding: 5px 15px 3px 17px;
+}
+
 .btn-primary {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white;
-  padding: 10px 20px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-weight: 500;
+  background: var(--win-blue);
+  color: var(--win-white);
 }
 
-.btn-primary:hover {
-  transform: scale(1.02);
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
-}
-
-.btn-primary:active {
-  transform: scale(0.98);
-}
-
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.1);
-  color: #f8fafc;
-  padding: 10px 20px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-weight: 500;
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-/* 输入框 */
+/* Inputs */
 .input {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  padding: 12px 16px;
-  color: #f8fafc;
-  font-size: 14px;
-  width: 100%;
-  transition: all 0.2s ease;
+  background: var(--win-white);
+  border: 2px solid;
+  border-color: var(--win-gray-dark) var(--win-white) var(--win-white) var(--win-gray-dark);
+  border-right-color: var(--win-black);
+  border-bottom-color: var(--win-black);
+  padding: 3px 4px;
+  font-size: 11px;
+  font-family: inherit;
 }
 
 .input:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  border-color: var(--win-black);
 }
 
-.input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+/* Select */
+select.input {
+  padding: 2px 4px;
 }
 
-/* 状态指示灯 */
+/* Panels */
+.panel {
+  background: var(--win-white);
+  border: 2px solid;
+  border-color: var(--win-gray-dark) var(--win-white) var(--win-white) var(--win-gray-dark);
+  border-right-color: var(--win-black);
+  border-bottom-color: var(--win-black);
+  padding: 8px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: -2px;
+  position: relative;
+  z-index: 1;
+}
+
+.tab {
+  background: var(--win-gray);
+  border: 2px solid;
+  border-color: var(--win-white) var(--win-gray-dark) var(--win-gray) var(--win-gray-dark);
+  padding: 2px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-right: 2px;
+}
+
+.tab.active {
+  background: var(--win-white);
+  border-bottom-color: var(--win-white);
+  padding-bottom: 4px;
+}
+
+/* Status indicators */
 .status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
   display: inline-block;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--win-black);
 }
 
 .status-running {
-  background: #10b981;
-  box-shadow: 0 0 10px #10b981;
-  animation: pulse 2s infinite;
+  background: #00aa00;
 }
 
 .status-stopped {
-  background: #64748b;
+  background: var(--win-gray-dark);
 }
 
 .status-error {
-  background: #ef4444;
-  box-shadow: 0 0 10px #ef4444;
+  background: #aa0000;
 }
 
 .status-starting {
-  background: #f59e0b;
-  animation: pulse 1s infinite;
+  background: #aaaa00;
 }
 
-/* 动画 */
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+::-webkit-scrollbar-track {
+  background: var(--win-gray);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23c0c0c0'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23c0c0c0'/%3E%3C/svg%3E");
 }
 
-.animate-slide-in {
-  animation: slideIn 0.3s ease-out;
+::-webkit-scrollbar-thumb {
+  background: var(--win-gray);
+  border: 2px solid;
+  border-color: var(--win-white) var(--win-black) var(--win-black) var(--win-white);
 }
 
-/* 背景光晕效果 */
-.bg-glow {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  z-index: -1;
-  overflow: hidden;
+::-webkit-scrollbar-button {
+  background: var(--win-gray);
+  border: 2px solid;
+  border-color: var(--win-white) var(--win-gray-dark) var(--win-gray-dark) var(--win-white);
 }
 
-.bg-glow::before {
-  content: '';
+/* Icons (pixelated) */
+.icon {
+  image-rendering: pixelated;
+}
+
+/* Menu */
+.menu {
+  background: var(--win-gray);
+  border: 2px solid;
+  border-color: var(--win-white) var(--win-black) var(--win-black) var(--win-white);
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle at 30% 30%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-              radial-gradient(circle at 70% 70%, rgba(34, 211, 238, 0.1) 0%, transparent 50%);
-  animation: float 20s ease-in-out infinite;
+  z-index: 1000;
+  min-width: 150px;
 }
 
-@keyframes float {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  50% { transform: translate(-20px, -20px) rotate(5deg); }
+.menu-item {
+  padding: 4px 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
+.menu-item:hover {
+  background: var(--win-blue);
+  color: var(--win-white);
+}
+
+.menu-separator {
+  border-top: 1px solid var(--win-gray-dark);
+  border-bottom: 1px solid var(--win-white);
+  margin: 2px 4px;
+}
+
+/* Grid */
+.grid {
+  display: grid;
+  gap: 8px;
+}
+
+/* Utilities */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-1 { gap: 4px; }
+.gap-2 { gap: 8px; }
+.gap-4 { gap: 16px; }
+.p-2 { padding: 8px; }
+.p-4 { padding: 16px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-4 { margin-bottom: 16px; }
+.text-sm { font-size: 11px; }
+.font-bold { font-weight: bold; }

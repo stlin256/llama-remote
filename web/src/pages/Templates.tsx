@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, FileText, Settings, X } from 'lucide-react'
+import { Plus, Trash2, FileText, Settings } from 'lucide-react'
 import { useStore } from '../store'
 import { api } from '../hooks/api'
 import type { Template, PromptTemplate } from '../types'
@@ -64,179 +63,163 @@ export default function Templates() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* 标题栏 */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">模板管理</h1>
-      </div>
+    <div className="flex flex-col gap-4">
+      <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>模板管理</h2>
 
       {/* Tabs */}
       <div className="flex gap-2">
         <button
           onClick={() => setActiveTab('params')}
-          className={`px-4 py-2 rounded-xl transition-colors ${
-            activeTab === 'params'
-              ? 'bg-primary/20 text-primary border border-primary/30'
-              : 'text-gray-400 hover:bg-white/5'
-          }`}
+          className={`btn ${activeTab === 'params' ? 'btn-primary' : ''}`}
         >
-          <Settings size={18} className="inline mr-2" />
+          <Settings size={12} style={{ marginRight: 4 }} />
           参数模板
         </button>
         <button
           onClick={() => setActiveTab('prompts')}
-          className={`px-4 py-2 rounded-xl transition-colors ${
-            activeTab === 'prompts'
-              ? 'bg-primary/20 text-primary border border-primary/30'
-              : 'text-gray-400 hover:bg-white/5'
-          }`}
+          className={`btn ${activeTab === 'prompts' ? 'btn-primary' : ''}`}
         >
-          <FileText size={18} className="inline mr-2" />
+          <FileText size={12} style={{ marginRight: 4 }} />
           提示词模板
         </button>
       </div>
 
-      {/* 参数模板 */}
+      {/* Parameter Templates */}
       {activeTab === 'params' && (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           <div className="flex justify-end">
             <button
               onClick={() => {
                 setTemplateForm({ name: '', params: { ngl: 999, context: 8192 } })
                 setShowTemplateModal(true)
               }}
-              className="btn-primary flex items-center gap-2"
+              className="btn"
             >
-              <Plus size={18} />
+              <Plus size={12} style={{ marginRight: 4 }} />
               新建模板
             </button>
           </div>
 
           {templates.length === 0 ? (
-            <div className="glass-card p-12 text-center">
-              <Settings size={48} className="mx-auto mb-4 text-gray-600" />
-              <p className="text-gray-400">暂无参数模板</p>
+            <div className="panel" style={{ padding: 32, textAlign: 'center' }}>
+              <Settings size={32} style={{ opacity: 0.5, marginBottom: 8 }} />
+              <p>暂无参数模板</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {templates.map((t, idx) => (
-                <motion.div
-                  key={t.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="glass-card p-4"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium">{t.name}</h3>
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {templates.map((t) => (
+                <div key={t.name} className="panel" style={{ padding: 8 }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span style={{ fontWeight: 'bold' }}>{t.name}</span>
                     <button
                       onClick={() => handleDeleteTemplate(t.name)}
-                      className="p-2 rounded-lg hover:bg-white/10 text-error"
+                      className="btn"
+                      style={{ padding: '2px 4px', minWidth: 'auto' }}
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={10} />
                     </button>
                   </div>
-                  <div className="space-y-1 text-sm text-gray-400">
-                    <p>ngl: {t.params?.ngl}</p>
-                    <p>context: {t.params?.context}</p>
-                    <p>port: {t.params?.port}</p>
-                    {t.params?.flash_attention && <p>flash_attention: true</p>}
+                  <div className="text-sm" style={{ fontSize: 10, color: 'var(--win-gray-dark)' }}>
+                    <div>ngl: {t.params?.ngl}</div>
+                    <div>context: {t.params?.context}</div>
+                    <div>port: {t.params?.port}</div>
+                    {t.params?.flash_attention && <div>flash_attention: true</div>}
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           )}
         </div>
       )}
 
-      {/* 提示词模板 */}
+      {/* Prompt Templates */}
       {activeTab === 'prompts' && (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           <div className="flex justify-end">
             <button
               onClick={() => {
                 setPromptForm({ name: '', content: '' })
                 setShowPromptModal(true)
               }}
-              className="btn-primary flex items-center gap-2"
+              className="btn"
             >
-              <Plus size={18} />
+              <Plus size={12} style={{ marginRight: 4 }} />
               新建模板
             </button>
           </div>
 
           {prompts.length === 0 ? (
-            <div className="glass-card p-12 text-center">
-              <FileText size={48} className="mx-auto mb-4 text-gray-600" />
-              <p className="text-gray-400">暂无提示词模板</p>
+            <div className="panel" style={{ padding: 32, textAlign: 'center' }}>
+              <FileText size={32} style={{ opacity: 0.5, marginBottom: 8 }} />
+              <p>暂无提示词模板</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {prompts.map((p, idx) => (
-                <motion.div
-                  key={p.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="glass-card p-4"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium">{p.name}</h3>
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+              {prompts.map((p) => (
+                <div key={p.name} className="panel" style={{ padding: 8 }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span style={{ fontWeight: 'bold' }}>{p.name}</span>
                     <button
                       onClick={() => handleDeletePrompt(p.name)}
-                      className="p-2 rounded-lg hover:bg-white/10 text-error"
+                      className="btn"
+                      style={{ padding: '2px 4px', minWidth: 'auto' }}
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={10} />
                     </button>
                   </div>
-                  <p className="text-sm text-gray-400 font-mono bg-black/20 p-3 rounded-lg max-h-32 overflow-auto">
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontFamily: 'monospace',
+                      background: 'var(--win-gray)',
+                      padding: 8,
+                      maxHeight: 100,
+                      overflow: 'auto',
+                      whiteSpace: 'pre-wrap',
+                    }}
+                  >
                     {p.content}
-                  </p>
-                </motion.div>
+                  </div>
+                </div>
               ))}
             </div>
           )}
         </div>
       )}
 
-      {/* 参数模板弹窗 */}
-      <AnimatePresence>
-        {showTemplateModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setShowTemplateModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              className="glass-card w-full max-w-md p-6"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">新建参数模板</h2>
-                <button onClick={() => setShowTemplateModal(false)}><X size={20} /></button>
+      {/* Template Modal */}
+      {showTemplateModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }} onClick={() => setShowTemplateModal(false)}>
+          <div className="window" style={{ width: 400 }} onClick={e => e.stopPropagation()}>
+            <div className="title-bar">
+              <span>新建参数模板</span>
+              <div className="title-bar-buttons">
+                <div className="title-bar-btn" onClick={() => setShowTemplateModal(false)}>X</div>
               </div>
-              <div className="space-y-4">
+            </div>
+            <div className="window-body">
+              <div className="flex flex-col gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">模板名称</label>
+                  <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>模板名称</label>
                   <input
                     type="text"
                     className="input"
+                    style={{ width: '100%' }}
                     value={templateForm.name || ''}
                     onChange={e => setTemplateForm({ ...templateForm, name: e.target.value })}
                     placeholder="长上下文模式"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">GPU层数</label>
+                    <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>GPU层数</label>
                     <input
                       type="number"
                       className="input"
+                      style={{ width: '100%' }}
                       value={templateForm.params?.ngl || 999}
                       onChange={e => setTemplateForm({
                         ...templateForm,
@@ -245,10 +228,11 @@ export default function Templates() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">上下文长度</label>
+                    <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>上下文长度</label>
                     <input
                       type="number"
                       className="input"
+                      style={{ width: '100%' }}
                       value={templateForm.params?.context || 8192}
                       onChange={e => setTemplateForm({
                         ...templateForm,
@@ -257,79 +241,72 @@ export default function Templates() {
                     />
                   </div>
                 </div>
-                <div className="flex gap-6">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={templateForm.params?.flash_attention || false}
-                      onChange={e => setTemplateForm({
-                        ...templateForm,
-                        params: { ...templateForm.params, flash_attention: e.target.checked }
-                      })}
-                    />
-                    <span className="text-sm">Flash Attention</span>
-                  </label>
-                </div>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={templateForm.params?.flash_attention || false}
+                    onChange={e => setTemplateForm({
+                      ...templateForm,
+                      params: { ...templateForm.params, flash_attention: e.target.checked }
+                    })}
+                  />
+                  <span className="text-sm">Flash Attention</span>
+                </label>
               </div>
-              <div className="flex justify-end gap-2 mt-6">
-                <button onClick={() => setShowTemplateModal(false)} className="btn-secondary">取消</button>
-                <button onClick={handleSaveTemplate} className="btn-primary">保存</button>
+              <div className="flex justify-end gap-2" style={{ marginTop: 16 }}>
+                <button onClick={() => setShowTemplateModal(false)} className="btn">取消</button>
+                <button onClick={handleSaveTemplate} className="btn btn-primary">保存</button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* 提示词模板弹窗 */}
-      <AnimatePresence>
-        {showPromptModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setShowPromptModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              className="glass-card w-full max-w-lg p-6"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">新建提示词模板</h2>
-                <button onClick={() => setShowPromptModal(false)}><X size={20} /></button>
+      {/* Prompt Modal */}
+      {showPromptModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }} onClick={() => setShowPromptModal(false)}>
+          <div className="window" style={{ width: 500 }} onClick={e => e.stopPropagation()}>
+            <div className="title-bar">
+              <span>新建提示词模板</span>
+              <div className="title-bar-buttons">
+                <div className="title-bar-btn" onClick={() => setShowPromptModal(false)}>X</div>
               </div>
-              <div className="space-y-4">
+            </div>
+            <div className="window-body">
+              <div className="flex flex-col gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">模板名称</label>
+                  <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>模板名称</label>
                   <input
                     type="text"
                     className="input"
+                    style={{ width: '100%' }}
                     value={promptForm.name || ''}
                     onChange={e => setPromptForm({ ...promptForm, name: e.target.value })}
                     placeholder="代码助手"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">提示词内容</label>
+                  <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>提示词内容</label>
                   <textarea
-                    className="input min-h-[200px] font-mono text-sm"
+                    className="input"
+                    style={{ width: '100%', minHeight: 150, fontFamily: 'monospace', fontSize: 10 }}
                     value={promptForm.content || ''}
                     onChange={e => setPromptForm({ ...promptForm, content: e.target.value })}
                     placeholder="你是一个专业的编程助手..."
                   />
                 </div>
               </div>
-              <div className="flex justify-end gap-2 mt-6">
-                <button onClick={() => setShowPromptModal(false)} className="btn-secondary">取消</button>
-                <button onClick={handleSavePrompt} className="btn-primary">保存</button>
+              <div className="flex justify-end gap-2" style={{ marginTop: 16 }}>
+                <button onClick={() => setShowPromptModal(false)} className="btn">取消</button>
+                <button onClick={handleSavePrompt} className="btn btn-primary">保存</button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

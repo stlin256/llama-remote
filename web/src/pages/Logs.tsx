@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
 import { ScrollText, Search, Trash2 } from 'lucide-react'
 import { useStore } from '../store'
 
@@ -9,7 +8,6 @@ export default function Logs() {
   const [levelFilter, setLevelFilter] = useState<string>('all')
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // 自动滚动到底部
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -31,33 +29,31 @@ export default function Logs() {
   }
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
-      {/* 标题栏 */}
+    <div className="flex flex-col gap-4" style={{ height: '100%' }}>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">日志</h1>
-        <button
-          onClick={clearLogs}
-          className="btn-secondary flex items-center gap-2"
-        >
-          <Trash2 size={18} />
+        <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>日志</h2>
+        <button onClick={clearLogs} className="btn">
+          <Trash2 size={12} style={{ marginRight: 4 }} />
           清空
         </button>
       </div>
 
-      {/* 搜索和过滤 */}
+      {/* Search and filter */}
       <div className="flex gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={14} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--win-gray-dark)' }} />
           <input
             type="text"
-            className="input pl-10"
+            className="input"
+            style={{ paddingLeft: 28, width: '100%' }}
             placeholder="搜索日志..."
             value={filter}
             onChange={e => setFilter(e.target.value)}
           />
         </div>
         <select
-          className="input w-40"
+          className="input"
+          style={{ width: 120 }}
           value={levelFilter}
           onChange={e => setLevelFilter(e.target.value)}
         >
@@ -69,40 +65,38 @@ export default function Logs() {
         </select>
       </div>
 
-      {/* 日志内容 */}
-      <div className="flex-1 glass-card overflow-hidden">
+      {/* Log content */}
+      <div className="panel" style={{ flex: 1, overflow: 'hidden', padding: 0 }}>
         <div
           ref={scrollRef}
-          className="h-full overflow-auto p-4 font-mono text-sm"
+          style={{ height: '100%', overflow: 'auto', padding: 8, fontFamily: 'monospace', fontSize: 10 }}
         >
           {filteredLogs.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-gray-500">
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--win-gray-dark)' }}>
               <div className="text-center">
-                <ScrollText size={48} className="mx-auto mb-4 opacity-50" />
+                <ScrollText size={32} style={{ opacity: 0.5, marginBottom: 8 }} />
                 <p>暂无日志</p>
               </div>
             </div>
           ) : (
-            <div className="space-y-1">
+            <div className="flex flex-col gap-1">
               {filteredLogs.map((log, idx) => {
                 const level = getLogLevel(log.content)
                 return (
-                  <motion.div
+                  <div
                     key={idx}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className={`flex gap-3 py-1 px-2 rounded ${
-                      level === 'error' ? 'bg-error/10 text-error' :
-                      level === 'warning' ? 'bg-warning/10 text-warning' :
-                      'text-gray-300'
-                    }`}
+                    style={{
+                      padding: '2px 4px',
+                      background: level === 'error' ? '#ffcccc' : level === 'warning' ? '#ffffcc' : 'transparent',
+                      color: level === 'error' ? '#aa0000' : level === 'warning' ? '#aa8800' : 'inherit',
+                    }}
                   >
-                    <span className="text-gray-600 shrink-0">
+                    <span style={{ color: 'var(--win-gray-dark)', marginRight: 8 }}>
                       {new Date(log.timestamp).toLocaleTimeString()}
                     </span>
-                    <span className="text-gray-500 shrink-0">[{log.instance}]</span>
-                    <span className="break-all">{log.content}</span>
-                  </motion.div>
+                    <span style={{ color: 'var(--win-gray-dark)', marginRight: 8 }}>[{log.instance}]</span>
+                    <span>{log.content}</span>
+                  </div>
                 )
               })}
             </div>

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard,
   Server,
@@ -9,9 +8,6 @@ import {
   ScrollText,
   Settings,
   Cpu,
-  Menu,
-  X,
-  Bell,
 } from 'lucide-react'
 import { useStore } from '../store'
 import { api, createWebSocket } from '../hooks/api'
@@ -25,13 +21,9 @@ const navItems = [
   { path: '/settings', icon: Settings, label: '设置' },
 ]
 
-interface LayoutProps {
-  children: React.ReactNode
-}
-
-export default function Layout({ children }: LayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, addLog, instances, updateInstance, gpuStats } = useStore()
+export default function Layout({ children }: { children: React.ReactNode }) {
+  const [time, setTime] = useState(new Date())
+  const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, instances } = useStore()
 
   useEffect(() => {
     // 加载初始数据
@@ -65,142 +57,92 @@ export default function Layout({ children }: LayoutProps) {
         case 'stats':
           setGpuStats(data.payload)
           break
-        case 'instance_status':
-          updateInstance(data.payload.id, { status: data.payload.status })
-          break
-        case 'log':
-          addLog({ instance: data.payload.instance, content: data.payload.content })
-          break
       }
     })
-
     return () => ws.close()
+  }, [])
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000)
+    return () => clearInterval(timer)
   }, [])
 
   const runningCount = instances.filter(i => i.status === 'running').length
 
   return (
-    <div className="flex min-h-screen">
-      {/* 侧边栏 */}
-      <motion.aside
-        initial={false}
-        animate={{ width: sidebarOpen ? 240 : 80 }}
-        className="glass border-r border-white/10 flex flex-col"
-      >
-        {/* Logo */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between">
-          <AnimatePresence>
-            {sidebarOpen && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center gap-3"
-              >
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                  <Cpu className="w-6 h-6 text-white" />
-                </div>
-                <span className="font-semibold text-lg">Llama Remote</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+    <div className="desktop">
+      {/* Desktop icons */}
+      <div style={{ position: 'absolute', top: 16, left: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {navItems.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            className="flex flex-col items-center"
+            style={{ width: 64, cursor: 'pointer', color: 'white', textDecoration: 'none' }}
           >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+            <item.icon size={32} style={{ filter: 'drop-shadow(1px 1px 0 #000)' }} />
+            <span style={{ fontSize: 11, textAlign: 'center', textShadow: '1px 1px 0 #000', marginTop: 4 }}>
+              {item.label}
+            </span>
+          </NavLink>
+        ))}
+      </div>
+
+      {/* Main window */}
+      <div
+        className="window"
+        style={{ top: 40, left: 100, right: 20, bottom: 40, minWidth: 600, minHeight: 400 }}
+      >
+        <div className="title-bar">
+          <span>Llama Remote</span>
+          <div className="title-bar-buttons">
+            <div className="title-bar-btn">_</div>
+            <div className="title-bar-btn">X</div>
+          </div>
         </div>
-
-        {/* 导航 */}
-        <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                  isActive
-                    ? 'bg-primary/20 text-primary border border-primary/30'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                }`
-              }
-            >
-              <item.icon size={20} />
-              <AnimatePresence>
-                {sidebarOpen && (
-                  <motion.span
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: 'auto' }}
-                    exit={{ opacity: 0, width: 0 }}
-                  >
-                    {item.label}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* 底部状态 */}
-        {sidebarOpen && gpuStats && (
-          <div className="p-4 border-t border-white/10">
-            <div className="glass-card p-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-400">GPU</span>
-                <span className="text-sm font-medium">{gpuStats.name}</span>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">利用率</span>
-                  <span>{gpuStats.utilization.toFixed(0)}%</span>
-                </div>
-                <div className="w-full bg-white/10 rounded-full h-1.5">
-                  <div
-                    className="bg-gradient-to-r from-primary to-accent h-1.5 rounded-full transition-all"
-                    style={{ width: `${gpuStats.utilization}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">显存</span>
-                  <span>{gpuStats.memory_used.toFixed(1)} / {gpuStats.memory_total.toFixed(0)} GB</span>
-                </div>
-                <div className="w-full bg-white/10 rounded-full h-1.5">
-                  <div
-                    className="bg-gradient-to-r from-success to-warning h-1.5 rounded-full transition-all"
-                    style={{ width: `${(gpuStats.memory_used / gpuStats.memory_total) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </div>
+        <div className="window-body">
+          {/* Tab bar */}
+          <div className="tabs" style={{ marginBottom: 8 }}>
+            {navItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}
+              >
+                {item.label}
+              </NavLink>
+            ))}
           </div>
-        )}
-      </motion.aside>
-
-      {/* 主内容区 */}
-      <div className="flex-1 flex flex-col">
-        {/* 顶部栏 */}
-        <header className="h-16 glass border-b border-white/10 flex items-center justify-between px-6">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold">Llama Remote</h1>
+          {/* Content */}
+          <div style={{ background: 'var(--win-white)', border: '2px solid inset', padding: 8, minHeight: 300 }}>
+            {children}
           </div>
-          <div className="flex items-center gap-4">
-            {/* 运行状态 */}
-            <div className="flex items-center gap-2 px-4 py-2 glass rounded-xl">
-              <span className={`status-dot ${runningCount > 0 ? 'status-running' : 'status-stopped'}`} />
-              <span className="text-sm">{runningCount} 实例运行中</span>
-            </div>
-            <button className="p-2 rounded-lg hover:bg-white/10 transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full" />
-            </button>
-          </div>
-        </header>
+        </div>
+      </div>
 
-        {/* 内容 */}
-        <main className="flex-1 p-6 overflow-auto">
-          {children}
-        </main>
+      {/* Status bar */}
+      <div style={{ background: 'var(--win-gray)', border: '2px solid', borderColor: 'var(--win-gray-dark) var(--win-white) var(--win-white) var(--win-gray-dark)', padding: '2px 8px', marginBottom: 4, display: 'flex', gap: 16, fontSize: 11 }}>
+        <span>就绪</span>
+        <span>{runningCount} 实例运行中</span>
+      </div>
+
+      {/* Taskbar */}
+      <div className="taskbar">
+        <div className="start-button">
+          <div style={{ width: 16, height: 16, background: 'var(--win-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Cpu size={12} color="white" />
+          </div>
+          Start
+        </div>
+        <div className="taskbar-items">
+          <div className="taskbar-item active">
+            <Server size={12} style={{ marginRight: 4 }} />
+            Llama Remote
+          </div>
+        </div>
+        <div className="clock">
+          {time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+        </div>
       </div>
     </div>
   )
