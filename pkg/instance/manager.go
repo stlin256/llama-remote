@@ -17,16 +17,16 @@ import (
 )
 
 type Instance struct {
-	ID             string                 `yaml:"id"`
-	Name           string                 `yaml:"name"`
-	Model          string                 `yaml:"model"`
-	Mmproj         string                 `yaml:"mmproj"`
-	Params         map[string]interface{} `yaml:"params"`
-	PromptTemplate string                 `yaml:"prompt_template"`
-	Status         string                 `yaml:"status"`
-	Port           int                    `yaml:"port"`
-	PID            int                    `yaml:"-"`
-	LogFile        string                 `yaml:"-"`
+	ID             string                 `yaml:"id" json:"id"`
+	Name           string                 `yaml:"name" json:"name"`
+	Model          string                 `yaml:"model" json:"model"`
+	Mmproj         string                 `yaml:"mmproj" json:"mmproj"`
+	Params         map[string]interface{} `yaml:"params" json:"params"`
+	PromptTemplate string                 `yaml:"prompt_template" json:"prompt_template"`
+	Status         string                 `yaml:"status" json:"status"`
+	Port           int                    `yaml:"port" json:"port"`
+	PID            int                    `yaml:"-" json:"-"`
+	LogFile        string                 `yaml:"-" json:"-"`
 }
 
 type InstanceData struct {
