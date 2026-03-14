@@ -95,3 +95,10 @@ func (m *Manager) BroadcastLog(instanceID, logLine string) {
 		},
 	})
 }
+
+func (m *Manager) BroadcastSystemStats(stats gpu.SystemStats) {
+	m.Broadcast(Message{
+		Type:    "system",
+		Payload: stats,
+	})
+}

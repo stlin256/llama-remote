@@ -80,6 +80,16 @@ export default function Instances() {
     return `${size.toFixed(1)} ${units[unitIndex]}`
   }
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'running': return '运行中'
+      case 'starting': return '加载中'
+      case 'stopped': return '已停止'
+      case 'error': return '崩溃'
+      default: return status
+    }
+  }
+
   const openCreateModal = () => {
     setEditingInstance(null)
     setSelectedModel(null)
@@ -150,9 +160,24 @@ export default function Instances() {
       if (editingInstance) {
         await api.updateInstance(editingInstance.id, finalData)
         updateInstance(editingInstance.id, finalData)
+        // If instance was running, ask to restart
+        if (editingInstance.status === 'running') {
+          if (confirm('实例正在运行，修改已保存。是否重新启动以应用更改？')) {
+            await api.stopInstance(editingInstance.id)
+            await api.startInstance(editingInstance.id)
+            updateInstance(editingInstance.id, { status: 'starting' })
+          }
+        }
       } else {
         const created = await api.createInstance(finalData)
         addInstance(created)
+        setShowModal(false)
+        // Ask to start the new instance
+        if (confirm('实例创建成功，是否立即启动？')) {
+          await api.startInstance(created.id)
+          updateInstance(created.id, { status: 'starting' })
+        }
+        return
       }
       setShowModal(false)
     } catch (e) {
@@ -234,7 +259,7 @@ export default function Instances() {
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{instance.params?.context ?? 'N/A'}</td>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>
                     <span className={`status-dot status-${instance.status}`} style={{ marginRight: 4 }} />
-                    {instance.status}
+                    {getStatusText(instance.status)}
                   </td>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>
                     <div className="flex gap-1">

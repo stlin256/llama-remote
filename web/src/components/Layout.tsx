@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useStore } from '../store'
 import { api, createWebSocket } from '../hooks/api'
 
@@ -14,18 +14,28 @@ const navItems = [
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [time, setTime] = useState(new Date())
-  const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, instances } = useStore()
+  const navigate = useNavigate()
+  const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, setSystemStats, setAuthenticated, instances } = useStore()
+
+  const handleLogout = async () => {
+    if (confirm('确定要退出登录吗？')) {
+      await api.logout()
+      setAuthenticated(false)
+      navigate('/')
+    }
+  }
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [config, insts, models, templates, prompts, gpu] = await Promise.all([
+        const [config, insts, models, templates, prompts, gpu, system] = await Promise.all([
           api.getConfig(),
           api.getInstances(),
           api.scanModels(),
           api.getTemplates(),
           api.getPrompts(),
           api.getGPU(),
+          api.getSystem(),
         ])
         setConfig(config)
         setInstances(insts)
@@ -33,6 +43,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         setTemplates(templates?.templates || [])
         setPrompts(prompts?.prompts || [])
         if (gpu?.name) setGpuStats(gpu)
+        if (system) setSystemStats(system)
       } catch (e) {
         console.error('Failed to load data:', e)
       }
@@ -44,6 +55,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const ws = createWebSocket((data) => {
       if (data.type === 'stats') {
         setGpuStats(data.payload)
+      } else if (data.type === 'system') {
+        setSystemStats(data.payload)
       }
     })
     return () => ws.close()
@@ -90,7 +103,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <span>Llama Remote - 控制面板</span>
           <div className="title-bar-buttons">
             <div className="title-bar-btn">_</div>
-            <div className="title-bar-btn">X</div>
+            <div className="title-bar-btn" onClick={handleLogout} title="退出登录">X</div>
           </div>
         </div>
 

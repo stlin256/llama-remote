@@ -57,7 +57,7 @@ func (m *Monitor) Get() Stats {
 }
 
 func (m *Monitor) poll() {
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -80,7 +80,7 @@ func (m *Monitor) poll() {
 }
 
 func (m *Monitor) queryGPU() Stats {
-	cmd := exec.Command("nvidia-smi", "--query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu,fan.speed,power.draw,performance.limit,memory.load",
+	cmd := exec.Command("nvidia-smi", "--query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu,fan.speed,power.draw,pci.bus,power.limit",
 		"--format=csv,noheader,nounits")
 
 	output, err := cmd.Output()
@@ -95,7 +95,7 @@ func (m *Monitor) queryGPU() Stats {
 
 	// 只取第一个GPU
 	parts := strings.Split(lines[0], ",")
-	if len(parts) < 10 {
+	if len(parts) < 9 {
 		return Stats{}
 	}
 
@@ -111,8 +111,19 @@ func (m *Monitor) queryGPU() Stats {
 	stats.Temperature, _ = strconv.Atoi(strings.TrimSpace(parts[5]))
 	stats.FanSpeed, _ = strconv.Atoi(strings.TrimSpace(parts[6]))
 	stats.Power, _ = strconv.ParseFloat(strings.TrimSpace(parts[7]), 64)
-	stats.PerfLimit = strings.TrimSpace(parts[8])
-	stats.MemoryLoad = strings.TrimSpace(parts[9])
+	stats.PerfLimit = strings.TrimSpace(parts[8]) // Use pci.bus as alternative info
+
+	// Calculate memory load percentage
+	if stats.MemoryTotal > 0 {
+		load := (stats.MemoryUsed / stats.MemoryTotal) * 100
+		if load < 30 {
+			stats.MemoryLoad = "Low"
+		} else if load < 70 {
+			stats.MemoryLoad = "Medium"
+		} else {
+			stats.MemoryLoad = "High"
+		}
+	}
 
 	return stats
 }

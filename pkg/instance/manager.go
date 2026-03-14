@@ -231,10 +231,11 @@ func (m *Manager) Start(id string) error {
 		args = append(args, "-b", fmt.Sprintf("%d", int(batchSize)))
 	}
 
-	// 添加提示词模板参数
-	if inst.PromptTemplate != "" {
-		args = append(args, "--prompt-template", inst.PromptTemplate)
-	}
+	// 添加提示词模板参数 (仅当不为空时，且服务器版本支持)
+	// 注意: 某些llama.cpp版本不支持--prompt-template
+	// if inst.PromptTemplate != "" {
+	// 	args = append(args, "--prompt-template", inst.PromptTemplate)
+	// }
 
 	// 创建日志文件
 	logFile := filepath.Join(m.cfg.LogDir, fmt.Sprintf("%s.log", inst.ID))

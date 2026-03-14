@@ -71,6 +71,7 @@ export default function Templates() {
         <button
           onClick={() => setActiveTab('params')}
           className={`btn ${activeTab === 'params' ? 'btn-primary' : ''}`}
+          style={{ whiteSpace: 'nowrap' }}
         >
           <Settings size={12} style={{ marginRight: 4 }} />
           参数模板
@@ -78,6 +79,7 @@ export default function Templates() {
         <button
           onClick={() => setActiveTab('prompts')}
           className={`btn ${activeTab === 'prompts' ? 'btn-primary' : ''}`}
+          style={{ whiteSpace: 'nowrap' }}
         >
           <FileText size={12} style={{ marginRight: 4 }} />
           提示词模板

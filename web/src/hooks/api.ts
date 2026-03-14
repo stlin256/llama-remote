@@ -79,6 +79,9 @@ export const api = {
 
   // GPU
   getGPU: () => request<any>('/api/gpu'),
+
+  // System
+  getSystem: () => request<any>('/api/system'),
 }
 
 // WebSocket连接

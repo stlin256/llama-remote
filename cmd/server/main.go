@@ -59,6 +59,10 @@ func main() {
 	gpuMonitor := gpu.NewMonitor()
 	defer gpuMonitor.Stop()
 
+	// 初始化系统监控
+	sysMonitor := gpu.NewMonitorEx()
+	defer sysMonitor.Stop()
+
 	// 初始化模板管理器
 	templateMgr := templates.NewManager(cfg.DataDir)
 	promptMgr := prompts.NewManager(cfg.DataDir)
@@ -74,11 +78,14 @@ func main() {
 
 	// 启动GPU监控
 	gpuMonitor.Start()
+	sysMonitor.Start()
 	go func() {
 		for {
 			select {
 			case stats := <-gpuMonitor.Stats():
 				wsMgr.BroadcastStats(stats)
+			case stats := <-sysMonitor.Stats():
+				wsMgr.BroadcastSystemStats(stats)
 			}
 		}
 	}()
@@ -128,6 +135,9 @@ func main() {
 
 	// GPU状态API
 	api.HandleFunc("/gpu", gpuMonitor.HandleGet()).Methods("GET")
+
+	// 系统状态API
+	api.HandleFunc("/system", sysMonitor.HandleGet()).Methods("GET")
 
 	// 日志API
 	api.HandleFunc("/logs", logManager.HandleGet()).Methods("GET")

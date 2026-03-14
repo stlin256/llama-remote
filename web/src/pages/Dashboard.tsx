@@ -1,17 +1,20 @@
-import { Server, Cpu, Activity, Zap } from 'lucide-react'
+import { Server, Cpu, Activity, Zap, HardDrive } from 'lucide-react'
 import { useStore } from '../store'
 
 export default function Dashboard() {
-  const { instances, gpuStats } = useStore()
+  const { instances, gpuStats, systemStats } = useStore()
 
   const runningInstances = instances.filter(i => i.status === 'running')
+
+  // Remove "GPU" prefix from name
+  const gpuName = gpuStats?.name?.replace(/^GPU\s*/i, '') || ''
 
   return (
     <div className="flex flex-col gap-4">
       <h2 style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>系统概览</h2>
 
       {/* Stats */}
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+      <div className="grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
         <div className="panel" style={{ padding: 8 }}>
           <div className="flex items-center gap-2 mb-2">
             <Server size={16} />
@@ -29,33 +32,55 @@ export default function Dashboard() {
         <div className="panel" style={{ padding: 8 }}>
           <div className="flex items-center gap-2 mb-2">
             <Cpu size={16} />
-            <span className="text-sm">GPU利用率</span>
+            <span className="text-sm">CPU</span>
           </div>
-          <div style={{ fontSize: 24, fontWeight: 'bold' }}>{gpuStats ? `${gpuStats.utilization.toFixed(0)}%` : 'N/A'}</div>
+          <div style={{ fontSize: 24, fontWeight: 'bold' }}>{systemStats ? `${systemStats.cpu.toFixed(0)}%` : 'N/A'}</div>
+        </div>
+        <div className="panel" style={{ padding: 8 }}>
+          <div className="flex items-center gap-2 mb-2">
+            <HardDrive size={16} />
+            <span className="text-sm">内存</span>
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 'bold' }}>{systemStats ? `${systemStats.mem_used.toFixed(0)}GB` : 'N/A'}</div>
         </div>
         <div className="panel" style={{ padding: 8 }}>
           <div className="flex items-center gap-2 mb-2">
             <Zap size={16} />
-            <span className="text-sm">显存使用</span>
+            <span className="text-sm">显存</span>
           </div>
           <div style={{ fontSize: 24, fontWeight: 'bold' }}>{gpuStats ? `${gpuStats.memory_used.toFixed(1)}GB` : 'N/A'}</div>
         </div>
       </div>
 
-      {/* GPU Details */}
-      {gpuStats && (
-        <div className="panel" style={{ marginTop: 8 }}>
-          <h3 style={{ fontWeight: 'bold', marginBottom: 8 }}>GPU 监控</h3>
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, fontSize: 11 }}>
-            <div>GPU: {gpuStats.name}</div>
-            <div>利用率: {gpuStats.utilization.toFixed(0)}%</div>
-            <div>显存: {gpuStats.memory_used.toFixed(1)} / {gpuStats.memory_total.toFixed(0)} GB</div>
-            <div>温度: {gpuStats.temperature}°C</div>
-            <div>功率: {gpuStats.power.toFixed(0)}W</div>
-            <div>限制: {gpuStats.perf_limit || 'None'}</div>
+      {/* System Details */}
+      <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+        {/* CPU & Memory */}
+        {systemStats && (
+          <div className="panel">
+            <h3 style={{ fontWeight: 'bold', marginBottom: 8 }}>系统资源</h3>
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, fontSize: 11 }}>
+              <div>CPU: {systemStats.cpu.toFixed(0)}%</div>
+              <div>内存: {systemStats.mem_used.toFixed(0)} / {systemStats.mem_total.toFixed(0)} GB</div>
+              <div>内存使用率: {systemStats.mem_percent.toFixed(0)}%</div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* GPU Details */}
+        {gpuStats && (
+          <div className="panel">
+            <h3 style={{ fontWeight: 'bold', marginBottom: 8 }}>GPU 监控</h3>
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, fontSize: 11 }}>
+              <div>{gpuName}</div>
+              <div>利用率: {gpuStats.utilization.toFixed(0)}%</div>
+              <div>显存: {gpuStats.memory_used.toFixed(1)} / {gpuStats.memory_total.toFixed(0)} GB</div>
+              <div>温度: {gpuStats.temperature}°C</div>
+              <div>功率: {gpuStats.power.toFixed(0)}W</div>
+              <div>负载: {gpuStats.memory_load}</div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Instances */}
       <div className="panel" style={{ marginTop: 8 }}>

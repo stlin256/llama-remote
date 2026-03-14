@@ -25,6 +25,10 @@ interface AppState {
   gpuStats: GPUStats | null
   setGpuStats: (stats: GPUStats) => void
 
+  // System
+  systemStats: { cpu: number; mem_used: number; mem_total: number; mem_percent: number } | null
+  setSystemStats: (stats: { cpu: number; mem_used: number; mem_total: number; mem_percent: number }) => void
+
   // 模板
   templates: Template[]
   setTemplates: (templates: Template[]) => void
@@ -68,6 +72,10 @@ export const useStore = create<AppState>((set) => ({
   // GPU
   gpuStats: null,
   setGpuStats: (gpuStats) => set({ gpuStats }),
+
+  // System
+  systemStats: null,
+  setSystemStats: (systemStats) => set({ systemStats }),
 
   // 模板
   templates: [],
