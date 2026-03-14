@@ -25,3 +25,8 @@ web/node_modules/
 # Temporary
 *.tmp
 *.bak
+
+# Sensitive (contains passwords)
+deploy.py
+deploy.ps1
+deploy.sh
