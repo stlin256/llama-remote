@@ -2,39 +2,48 @@ import { useState } from 'react'
 import { Plus, Play, Square, Trash2, Edit2, Server } from 'lucide-react'
 import { useStore } from '../store'
 import { api } from '../hooks/api'
-import type { Instance } from '../types'
+import type { Instance, ModelInfo } from '../types'
+
+const DEFAULT_PARAMS = {
+  ngl: 999,
+  context: 8192,
+  host: '0.0.0.0',
+  port: 5000,
+  flash_attention: true,
+}
 
 export default function Instances() {
-  const { instances, models, config, addInstance, updateInstance, removeInstance } = useStore()
+  const { instances, models, addInstance, updateInstance, removeInstance } = useStore()
   const [showModal, setShowModal] = useState(false)
   const [editingInstance, setEditingInstance] = useState<Instance | null>(null)
+  const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null)
   const [formData, setFormData] = useState<Partial<Instance>>({
     name: '',
     model: '',
     mmproj: '',
-    params: {
-      ngl: 999,
-      context: 8192,
-      host: '0.0.0.0',
-      port: 5000,
-      flash_attention: true,
-    },
+    params: { ...DEFAULT_PARAMS },
     prompt_template: '',
   })
 
+  const formatSize = (bytes: number) => {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB']
+    let size = bytes
+    let unitIndex = 0
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024
+      unitIndex++
+    }
+    return `${size.toFixed(1)} ${units[unitIndex]}`
+  }
+
   const openCreateModal = () => {
     setEditingInstance(null)
+    setSelectedModel(null)
     setFormData({
       name: '',
       model: '',
       mmproj: '',
-      params: {
-        ngl: 999,
-        context: 8192,
-        host: '0.0.0.0',
-        port: 5000,
-        flash_attention: true,
-      },
+      params: { ...DEFAULT_PARAMS },
       prompt_template: '',
     })
     setShowModal(true)
@@ -42,17 +51,63 @@ export default function Instances() {
 
   const openEditModal = (instance: Instance) => {
     setEditingInstance(instance)
+    const model = models.find(m => m.path === instance.model) || null
+    setSelectedModel(model)
     setFormData({ ...instance })
     setShowModal(true)
   }
 
-  const handleSubmit = async () => {
+  const handleModelChange = (modelPath: string) => {
+    const model = models.find(m => m.path === modelPath) || null
+    setSelectedModel(model)
+
+    // Auto-fill name if empty
+    const newName = formData.name || (model ? model.name.replace('.gguf', '') : '')
+    const newMmproj = model?.mmproj || ''
+
+    setFormData({
+      ...formData,
+      model: modelPath,
+      mmproj: newMmproj,
+      name: newName,
+    })
+  }
+
+  const validateAndSubmit = async () => {
+    // Validate instance name
+    if (!formData.name || formData.name.trim() === '') {
+      alert('实例名称不能为空')
+      return
+    }
+
+    // Validate model
+    if (!formData.model) {
+      alert('请选择模型')
+      return
+    }
+
+    // Validate and sanitize params
+    const params = formData.params || {}
+    const sanitizedParams = {
+      ngl: Math.max(0, Math.floor(Number(params.ngl) || 999)),
+      context: Math.max(1, Math.min(2147483647, Math.floor(Number(params.context) || 8192))),
+      host: params.host || '0.0.0.0',
+      port: Math.max(1, Math.min(65535, Math.floor(Number(params.port) || 5000))),
+      threads: params.threads ? Math.max(1, Math.floor(Number(params.threads))) : undefined,
+      flash_attention: Boolean(params.flash_attention),
+      mlock: Boolean(params.mlock),
+      'no-mmap': Boolean(params['no-mmap']),
+      batch_size: params.batch_size ? Math.max(1, Math.floor(Number(params.batch_size))) : undefined,
+    }
+
+    const finalData = { ...formData, params: sanitizedParams }
+
     try {
       if (editingInstance) {
-        await api.updateInstance(editingInstance.id, formData)
-        updateInstance(editingInstance.id, formData)
+        await api.updateInstance(editingInstance.id, finalData)
+        updateInstance(editingInstance.id, finalData)
       } else {
-        const created = await api.createInstance(formData)
+        const created = await api.createInstance(finalData)
         addInstance(created)
       }
       setShowModal(false)
@@ -179,42 +234,44 @@ export default function Instances() {
             <div className="window-body">
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>实例名称</label>
+                  <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>实例名称 *</label>
                   <input
                     type="text"
                     className="input"
                     style={{ width: '100%' }}
                     value={formData.name || ''}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="必填"
                   />
                 </div>
+
                 <div>
-                  <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>llama-server路径</label>
-                  <div className="input" style={{ background: 'var(--win-gray)', color: 'var(--win-gray-dark)', fontFamily: 'monospace', fontSize: 10 }}>
-                    从设置中读取: {config?.paths.llama_bin || '未配置'}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>模型文件</label>
+                  <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>模型文件 *</label>
                   <select
                     className="input"
                     style={{ width: '100%' }}
                     value={formData.model || ''}
-                    onChange={e => {
-                      const model = models.find(m => m.path === e.target.value)
-                      setFormData({
-                        ...formData,
-                        model: e.target.value,
-                        mmproj: model?.mmproj || '',
-                      })
-                    }}
+                    onChange={e => handleModelChange(e.target.value)}
                   >
                     <option value="">选择模型...</option>
                     {models.map(m => (
-                      <option key={m.path} value={m.path}>{m.name}</option>
+                      <option key={m.path} value={m.path}>{m.name} ({formatSize(m.size)})</option>
                     ))}
                   </select>
                 </div>
+
+                {/* Model Info */}
+                {selectedModel && (
+                  <div className="panel" style={{ padding: 8 }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: 4 }}>模型信息</div>
+                    <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, fontSize: 10 }}>
+                      <div>大小: {formatSize(selectedModel.size)}</div>
+                      <div>路径: {selectedModel.path}</div>
+                      {selectedModel.mmproj && <div>MMProj: 已配置</div>}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>MMProj (可选)</label>
                   <select
@@ -224,8 +281,12 @@ export default function Instances() {
                     onChange={e => setFormData({ ...formData, mmproj: e.target.value })}
                   >
                     <option value="">无</option>
+                    {models.filter(m => m.mmproj || m.path.includes('mmproj')).map(m => (
+                      <option key={m.path} value={m.path}>{m.name}</option>
+                    ))}
                   </select>
                 </div>
+
                 <div className="panel" style={{ marginTop: 8 }}>
                   <h4 style={{ fontWeight: 'bold', marginBottom: 8 }}>启动参数</h4>
                   <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
@@ -235,10 +296,10 @@ export default function Instances() {
                         type="number"
                         className="input"
                         style={{ width: '100%' }}
-                        value={formData.params?.ngl || 999}
+                        value={formData.params?.ngl ?? 999}
                         onChange={e => setFormData({
                           ...formData,
-                          params: { ...formData.params, ngl: parseInt(e.target.value) }
+                          params: { ...formData.params, ngl: parseInt(e.target.value) || 999 }
                         })}
                       />
                     </div>
@@ -248,10 +309,10 @@ export default function Instances() {
                         type="number"
                         className="input"
                         style={{ width: '100%' }}
-                        value={formData.params?.context || 8192}
+                        value={formData.params?.context ?? 8192}
                         onChange={e => setFormData({
                           ...formData,
-                          params: { ...formData.params, context: parseInt(e.target.value) }
+                          params: { ...formData.params, context: parseInt(e.target.value) || 8192 }
                         })}
                       />
                     </div>
@@ -261,10 +322,10 @@ export default function Instances() {
                         type="number"
                         className="input"
                         style={{ width: '100%' }}
-                        value={formData.params?.port || 5000}
+                        value={formData.params?.port ?? 5000}
                         onChange={e => setFormData({
                           ...formData,
-                          params: { ...formData.params, port: parseInt(e.target.value) }
+                          params: { ...formData.params, port: parseInt(e.target.value) || 5000 }
                         })}
                       />
                     </div>
@@ -274,11 +335,12 @@ export default function Instances() {
                         type="number"
                         className="input"
                         style={{ width: '100%' }}
-                        value={formData.params?.threads || ''}
+                        value={formData.params?.threads ?? ''}
                         onChange={e => setFormData({
                           ...formData,
-                          params: { ...formData.params, threads: parseInt(e.target.value) }
+                          params: { ...formData.params, threads: parseInt(e.target.value) || undefined }
                         })}
+                        placeholder="自动"
                       />
                     </div>
                   </div>
@@ -286,7 +348,7 @@ export default function Instances() {
                     <label className="flex items-center gap-1">
                       <input
                         type="checkbox"
-                        checked={formData.params?.flash_attention || false}
+                        checked={formData.params?.flash_attention ?? true}
                         onChange={e => setFormData({
                           ...formData,
                           params: { ...formData.params, flash_attention: e.target.checked }
@@ -297,7 +359,7 @@ export default function Instances() {
                     <label className="flex items-center gap-1">
                       <input
                         type="checkbox"
-                        checked={formData.params?.mlock || false}
+                        checked={formData.params?.mlock ?? false}
                         onChange={e => setFormData({
                           ...formData,
                           params: { ...formData.params, mlock: e.target.checked }
@@ -305,12 +367,23 @@ export default function Instances() {
                       />
                       <span className="text-sm">MLock</span>
                     </label>
+                    <label className="flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        checked={formData.params?.['no-mmap'] ?? false}
+                        onChange={e => setFormData({
+                          ...formData,
+                          params: { ...formData.params, 'no-mmap': e.target.checked }
+                        })}
+                      />
+                      <span className="text-sm">No-MMAP</span>
+                    </label>
                   </div>
                 </div>
               </div>
               <div className="flex gap-2 justify-end" style={{ marginTop: 16 }}>
                 <button onClick={() => setShowModal(false)} className="btn">取消</button>
-                <button onClick={handleSubmit} className="btn btn-primary">保存</button>
+                <button onClick={validateAndSubmit} className="btn btn-primary">保存</button>
               </div>
             </div>
           </div>
