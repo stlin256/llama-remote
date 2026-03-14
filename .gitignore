@@ -17,7 +17,11 @@ node_modules/
 
 # Build
 web/dist/
-web/node_modules/
+dist/
+cmd/server/dist/
+
+# IDE
+.claude/
 
 # Logs
 *.log
@@ -30,3 +34,8 @@ web/node_modules/
 deploy.py
 deploy.ps1
 deploy.sh
+
+# Debug & Config notes (contains server credentials)
+DEBUG.md
+server_config.txt
+credentials.txt
