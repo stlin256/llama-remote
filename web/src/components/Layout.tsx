@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Server, Cpu } from 'lucide-react'
 import { useStore } from '../store'
 import { api, createWebSocket } from '../hooks/api'
 
@@ -84,7 +83,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Main window */}
       <div
         className="window"
-        style={{ top: 8, left: 60, right: 8, bottom: 36, minWidth: 750, minHeight: 500 }}
+        style={{ top: 8, left: 60, right: 8, bottom: 8, minWidth: 750, minHeight: 500 }}
       >
         {/* Title bar */}
         <div className="title-bar">
@@ -145,34 +144,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       }}>
         <span>就绪</span>
         <span>{runningCount} 实例运行中</span>
-      </div>
-
-      {/* Taskbar */}
-      <div className="taskbar" style={{ position: 'absolute', bottom: 24 }}>
-        <div className="start-button">
-          <div style={{
-            width: 16,
-            height: 16,
-            background: 'var(--win-blue)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 10,
-            marginRight: 4
-          }}>
-            <Cpu size={10} color="white" />
-          </div>
-          Start
-        </div>
-        <div className="taskbar-items">
-          <div className="taskbar-item active">
-            <Server size={12} style={{ marginRight: 4 }} />
-            Llama Remote
-          </div>
-        </div>
-        <div className="clock">
+        <span style={{ marginLeft: 'auto' }}>
           {time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
-        </div>
+        </span>
       </div>
     </div>
   )
