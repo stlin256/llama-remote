@@ -63,20 +63,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div style={{
         position: 'absolute',
         left: 8,
-        top: '50%',
-        transform: 'translateY(-50%)',
+        top: 8,
         writingMode: 'vertical-rl',
         textOrientation: 'mixed',
         background: 'var(--win-blue)',
         color: 'white',
-        padding: '12px 4px',
-        fontSize: 18,
+        padding: '8px 6px',
+        fontSize: 20,
         fontWeight: 'bold',
         fontStyle: 'italic',
-        letterSpacing: 2,
+        letterSpacing: 3,
         border: '2px solid',
         borderColor: 'var(--win-white) var(--win-black) var(--win-black) var(--win-white)',
         zIndex: 10,
+        whiteSpace: 'nowrap',
       }}>
         LLAMA-REMOTE
       </div>
@@ -84,7 +84,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Main window */}
       <div
         className="window"
-        style={{ top: 20, left: 60, right: 20, bottom: 40, minWidth: 700, minHeight: 450 }}
+        style={{ top: 8, left: 60, right: 8, bottom: 36, minWidth: 750, minHeight: 500 }}
       >
         {/* Title bar */}
         <div className="title-bar">
@@ -121,7 +121,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             borderRightColor: 'var(--win-black)',
             borderBottomColor: 'var(--win-black)',
             padding: 8,
-            minHeight: 350,
             height: 'calc(100% - 40px)',
             overflow: 'auto'
           }}>
@@ -136,17 +135,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         border: '2px solid',
         borderColor: 'var(--win-gray-dark) var(--win-white) var(--win-white) var(--win-gray-dark)',
         padding: '2px 8px',
-        marginBottom: 4,
         display: 'flex',
         gap: 16,
-        fontSize: 11
+        fontSize: 11,
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
       }}>
         <span>就绪</span>
         <span>{runningCount} 实例运行中</span>
       </div>
 
       {/* Taskbar */}
-      <div className="taskbar">
+      <div className="taskbar" style={{ position: 'absolute', bottom: 24 }}>
         <div className="start-button">
           <div style={{
             width: 16,
