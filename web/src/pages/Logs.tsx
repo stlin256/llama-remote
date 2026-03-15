@@ -4,22 +4,32 @@ import { useStore } from '../store'
 import { api } from '../hooks/api'
 
 export default function Logs() {
-  const { logs, clearLogs } = useStore()
+  const { logs, clearLogs, instances } = useStore()
   const [filter, setFilter] = useState('')
   const [levelFilter, setLevelFilter] = useState<string>('all')
   const [serverLogs, setServerLogs] = useState<string[]>([])
   const [showServerLogs, setShowServerLogs] = useState(false)
+  const [selectedInstance, setSelectedInstance] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const loadServerLogs = async () => {
+  const loadServerLogs = async (instanceId?: string) => {
     try {
-      const data = await api.getInstanceLogs()
+      const id = instanceId || selectedInstance
+      if (!id) return
+      const data = await api.getInstanceLogs(id)
       setServerLogs(data.logs || [])
       setShowServerLogs(true)
     } catch (e) {
       console.error('Failed to load logs:', e)
     }
   }
+
+  // Auto-load logs when instance is selected
+  useEffect(() => {
+    if (selectedInstance) {
+      loadServerLogs(selectedInstance)
+    }
+  }, [selectedInstance])
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -45,10 +55,21 @@ export default function Logs() {
     <div className="flex flex-col gap-4" style={{ height: '100%' }}>
       <div className="flex items-center justify-between">
         <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>日志</h2>
-        <div className="flex gap-2">
-          <button onClick={loadServerLogs} className="btn">
+        <div className="flex gap-2 items-center">
+          <select
+            className="input"
+            style={{ width: 180 }}
+            value={selectedInstance}
+            onChange={e => setSelectedInstance(e.target.value)}
+          >
+            <option value="">选择实例...</option>
+            {instances.map(inst => (
+              <option key={inst.id} value={inst.id}>{inst.name}</option>
+            ))}
+          </select>
+          <button onClick={() => selectedInstance && loadServerLogs(selectedInstance)} className="btn" disabled={!selectedInstance}>
             <Terminal size={12} style={{ marginRight: 4 }} />
-            实例日志
+            查看日志
           </button>
           <button onClick={clearLogs} className="btn">
             <Trash2 size={12} style={{ marginRight: 4 }} />
@@ -88,7 +109,7 @@ export default function Logs() {
       {showServerLogs ? (
         <div className="panel" style={{ flex: 1, overflow: 'auto', padding: 8 }}>
           <div className="flex items-center justify-between mb-2">
-            <span style={{ fontWeight: 'bold' }}>实例日志</span>
+            <span style={{ fontWeight: 'bold' }}>{instances.find(i => i.id === selectedInstance)?.name || '实例'} 日志</span>
             <button onClick={() => setShowServerLogs(false)} className="btn" style={{ padding: '2px 8px' }}>关闭</button>
           </div>
           <pre style={{ fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
