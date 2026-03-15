@@ -4,23 +4,25 @@ import { useStore } from '../store'
 import { api, createWebSocket } from '../hooks/api'
 import { confirm } from '../components/ConfirmDialog'
 import { error } from '../components/MessageDialog'
-
-const navItems = [
-  { path: '/dashboard', label: '仪表盘' },
-  { path: '/instances', label: '实例' },
-  { path: '/models', label: '模型' },
-  { path: '/templates', label: '模板' },
-  { path: '/logs', label: '日志' },
-  { path: '/settings', label: '设置' },
-]
+import { useTranslation } from '../i18n/useTranslation'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [time, setTime] = useState(new Date())
   const navigate = useNavigate()
-  const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, setSystemStats, setAuthenticated, instances, updateInstanceStatus } = useStore()
+  const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, setSystemStats, setAuthenticated, instances, updateInstanceStatus, language } = useStore()
+  const { t } = useTranslation()
+
+  const navItems = [
+    { path: '/dashboard', label: t('dashboard') },
+    { path: '/instances', label: t('instances') },
+    { path: '/models', label: t('models') },
+    { path: '/templates', label: t('templates') },
+    { path: '/logs', label: t('logs') },
+    { path: '/settings', label: t('settings') },
+  ]
 
   const handleLogout = async () => {
-    if (await confirm('确定要退出登录吗？')) {
+    if (await confirm(language === 'zh' ? '确定要退出登录吗？' : 'Logout?')) {
       await api.logout()
       setAuthenticated(false)
       navigate('/')
@@ -28,7 +30,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   const handleStopAll = async () => {
-    if (await confirm('确定要停止所有运行中的实例吗？')) {
+    if (await confirm(language === 'zh' ? '确定要停止所有运行中的实例吗？' : 'Stop all running instances?')) {
       await api.stopAllInstances()
       // 刷新实例列表
       const data = await api.getInstances()
@@ -78,7 +80,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         const { id, message: errMsg } = data.payload
         const instance = instances.find(i => i.id === id)
         const name = instance?.name || id
-        error(`实例 "${name}" 错误: ${errMsg}`)
+        error(language === 'zh' ? `实例 "${name}" 错误: ${errMsg}` : `Instance "${name}" error: ${errMsg}`)
       }
     })
 
@@ -136,10 +138,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       >
         {/* Title bar */}
         <div className="title-bar">
-          <span>Llama Remote - 控制面板</span>
+          <span>Llama Remote - {t('dashboard')}</span>
           <div className="title-bar-buttons">
-            <div className="title-bar-btn" onClick={handleStopAll} title="停止所有实例" style={{ fontSize: 10, padding: '2px 4px' }}>■</div>
-            <div className="title-bar-btn" onClick={handleLogout} title="退出登录">X</div>
+            <div className="title-bar-btn" onClick={handleStopAll} title={t('stopAll')} style={{ fontSize: 10, padding: '2px 4px' }}>■</div>
+            <div className="title-bar-btn" onClick={handleLogout} title={t('logout')}>X</div>
           </div>
         </div>
 
@@ -191,8 +193,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         left: 0,
         right: 0,
       }}>
-        <span>就绪</span>
-        <span>{runningCount} 实例运行中</span>
+        <span>{language === 'zh' ? '就绪' : 'Ready'}</span>
+        <span>{runningCount} {t('running')}</span>
         <span style={{ marginLeft: 'auto' }}>
           {time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
         </span>

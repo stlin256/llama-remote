@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Save, HardDrive, Network, Lock } from 'lucide-react'
+import { Save, HardDrive, Network, Lock, Globe } from 'lucide-react'
 import { useStore } from '../store'
 import { api } from '../hooks/api'
+import { useTranslation } from '../i18n/useTranslation'
 
 export default function Settings() {
-  const { config, setConfig, setAuthenticated } = useStore()
+  const { config, setConfig, setAuthenticated, language, setLanguage } = useStore()
+  const { t } = useTranslation()
   const [formData, setFormData] = useState({
     host: '0.0.0.0',
     port: 8000,
@@ -48,9 +50,9 @@ export default function Settings() {
         paths: { llama_bin: formData.llama_bin, models_dir: formData.models_dir, log_dir: config?.paths.log_dir || '' },
         auth: { enable: formData.auth_enable },
       })
-      setMessage('保存成功')
+      setMessage(t('settingsSaved'))
     } catch (e) {
-      setMessage(`保存失败: ${e}`)
+      setMessage(`${t('failed')}: ${e}`)
     }
     setSaving(false)
   }
@@ -66,16 +68,44 @@ export default function Settings() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>设置</h2>
+      <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>{t('settingsTitle')}</h2>
+
+      {/* Language Settings */}
+      <div className="panel">
+        <h3 style={{ fontWeight: 'bold', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Globe size={14} />
+          {t('language')}
+        </h3>
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="language"
+              checked={language === 'zh'}
+              onChange={() => setLanguage('zh')}
+            />
+            <span className="text-sm">{t('chinese')}</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="language"
+              checked={language === 'en'}
+              onChange={() => setLanguage('en')}
+            />
+            <span className="text-sm">{t('english')}</span>
+          </label>
+        </div>
+      </div>
 
       <div className="panel">
         <h3 style={{ fontWeight: 'bold', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Network size={14} />
-          服务配置
+          {t('serverHost')}
         </h3>
         <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
           <div>
-            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>监听地址</label>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('serverHost')}</label>
             <input
               type="text"
               className="input"
@@ -85,7 +115,7 @@ export default function Settings() {
             />
           </div>
           <div>
-            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>监听端口</label>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('serverPort')}</label>
             <input
               type="number"
               className="input"
@@ -100,11 +130,11 @@ export default function Settings() {
       <div className="panel">
         <h3 style={{ fontWeight: 'bold', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
           <HardDrive size={14} />
-          路径配置
+          {t('modelsDirectory')}
         </h3>
         <div className="flex flex-col gap-4">
           <div>
-            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>llama.cpp 二进制路径</label>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('llamaServerPath')}</label>
             <input
               type="text"
               className="input"
@@ -115,7 +145,7 @@ export default function Settings() {
             />
           </div>
           <div>
-            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>模型目录</label>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('modelsDirectory')}</label>
             <input
               type="text"
               className="input"
@@ -131,7 +161,7 @@ export default function Settings() {
       <div className="panel">
         <h3 style={{ fontWeight: 'bold', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Lock size={14} />
-          访问控制
+          {t('password')}
         </h3>
         <div className="flex flex-col gap-4">
           <label className="flex items-center gap-2">
@@ -140,23 +170,23 @@ export default function Settings() {
               checked={formData.auth_enable}
               onChange={e => setFormData({ ...formData, auth_enable: e.target.checked })}
             />
-            <span className="text-sm">启用密码保护</span>
+            <span className="text-sm">{t('enablePassword')}</span>
           </label>
           <div>
-            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>登录密码 {formData.auth_enable ? '(留空保持不变)' : ''}</label>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('password')} {formData.auth_enable ? '(leave empty to keep)' : ''}</label>
             <input
               type="password"
               className="input"
               style={{ width: '100%' }}
               value={formData.auth_password}
               onChange={e => setFormData({ ...formData, auth_password: e.target.value })}
-              placeholder={formData.auth_enable ? '输入新密码' : '启用后设置密码'}
+              placeholder={formData.auth_enable ? 'New password' : 'Set password after enabling'}
               disabled={!formData.auth_enable}
             />
           </div>
           {formData.auth_enable && (
             <button onClick={handleLogout} className="btn" style={{ alignSelf: 'flex-start' }}>
-              退出登录
+              {t('logout')}
             </button>
           )}
         </div>
@@ -165,7 +195,7 @@ export default function Settings() {
       <div className="flex items-center gap-4">
         <button onClick={handleSave} disabled={saving} className="btn btn-primary">
           <Save size={12} style={{ marginRight: 4 }} />
-          {saving ? '保存中...' : '保存设置'}
+          {saving ? t('loading') : t('saveSettings')}
         </button>
         {message && (
           <span style={{ color: message.includes('失败') ? '#aa0000' : '#00aa00' }}>

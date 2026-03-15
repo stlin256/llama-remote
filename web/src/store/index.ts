@@ -1,10 +1,24 @@
 import { create } from 'zustand'
 import type { Instance, ModelInfo, GPUStats, Config, Template, PromptTemplate } from '../types'
+import { getBrowserLanguage } from '../i18n/useTranslation'
+
+// 获取保存的语言设置，如果没有则使用浏览器语言
+function getInitialLanguage(): 'zh' | 'en' {
+  const saved = localStorage.getItem('language')
+  if (saved === 'zh' || saved === 'en') {
+    return saved
+  }
+  return getBrowserLanguage()
+}
 
 interface AppState {
   // 配置
   config: Config | null
   setConfig: (config: Config) => void
+
+  // 语言
+  language: 'zh' | 'en'
+  setLanguage: (lang: 'zh' | 'en') => void
 
   // 认证
   authenticated: boolean
@@ -50,6 +64,13 @@ export const useStore = create<AppState>((set) => ({
   // 配置
   config: null,
   setConfig: (config) => set({ config }),
+
+  // 语言
+  language: getInitialLanguage(),
+  setLanguage: (language) => {
+    localStorage.setItem('language', language)
+    set({ language })
+  },
 
   // 认证
   authenticated: false,
