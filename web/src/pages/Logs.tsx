@@ -28,6 +28,11 @@ export default function Logs() {
   useEffect(() => {
     if (selectedInstance) {
       loadServerLogs(selectedInstance)
+      // 定时刷新日志
+      const interval = setInterval(() => {
+        loadServerLogs(selectedInstance)
+      }, 2000)
+      return () => clearInterval(interval)
     }
   }, [selectedInstance])
 
