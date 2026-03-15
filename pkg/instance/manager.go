@@ -320,18 +320,13 @@ func (m *Manager) stopInstance(inst *Instance) error {
 }
 
 func (m *Manager) StopAll() {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	for _, inst := range m.instances {
-		if inst.Status == "running" || inst.Status == "loading" || inst.PID > 0 {
-			// Force kill the process
-			if inst.PID > 0 {
-				proc, err := os.FindProcess(inst.PID)
-				if err == nil {
-					proc.Kill()
-				}
-			}
+		if inst.PID > 0 {
+			// Use kill command to send SIGKILL
+			exec.Command("kill", "-9", fmt.Sprintf("%d", inst.PID)).Run()
 			inst.Status = "stopped"
 			inst.PID = 0
 		}
