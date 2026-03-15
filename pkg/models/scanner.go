@@ -46,33 +46,14 @@ func (s *Scanner) scanModels() ([]ModelInfo, error) {
 		return models, nil
 	}
 
-	// 用于存储已找到的mmproj
-	mmprojMap := make(map[string]string)
-
-	// 先扫描所有mmproj文件
-	filepath.Walk(s.modelsDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if strings.HasSuffix(strings.ToLower(info.Name()), ".gguf") {
-			if strings.Contains(info.Name(), "mmproj") {
-				// 这是mmproj文件，找到对应的模型
-				modelPath := strings.Replace(path, "mmproj-", "", 1)
-				modelPath = strings.Replace(modelPath, ".gguf", ".gguf", 1)
-				mmprojMap[modelPath] = path
-			}
-		}
-		return nil
-	})
-
 	// 再扫描所有gguf模型文件
 	filepath.Walk(s.modelsDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
 
-		// 只处理.gguf文件，排除mmproj开头的
-		if strings.HasSuffix(strings.ToLower(info.Name()), ".gguf") && !strings.HasPrefix(info.Name(), "mmproj") {
+		// 只处理.gguf文件，排除文件名包含mmproj的
+		if strings.HasSuffix(strings.ToLower(info.Name()), ".gguf") && !strings.Contains(strings.ToLower(info.Name()), "mmproj") {
 			model := ModelInfo{
 				Name:         info.Name(),
 				Path:         path,
@@ -80,18 +61,25 @@ func (s *Scanner) scanModels() ([]ModelInfo, error) {
 				ModifiedTime: info.ModTime().Unix(),
 			}
 
-			// 检查是否有对应的mmproj
-			if mmproj, ok := mmprojMap[path]; ok {
-				model.Mmproj = mmproj
-			}
-
-			// 也检查同级目录下的mmproj文件
-			if model.Mmproj == "" {
-				dir := filepath.Dir(path)
-				baseName := strings.TrimSuffix(info.Name(), ".gguf")
-				possibleMmproj := filepath.Join(dir, "mmproj-"+baseName+".gguf")
-				if _, err := os.Stat(possibleMmproj); err == nil {
-					model.Mmproj = possibleMmproj
+			// 检查同目录下是否有mmproj文件（模糊匹配）
+			dir := filepath.Dir(path)
+			entries, err := os.ReadDir(dir)
+			if err == nil {
+				var mmprojs []string
+				for _, entry := range entries {
+					if entry.IsDir() {
+						continue
+					}
+					name := entry.Name()
+					// 只要文件名包含mmproj且是gguf文件就匹配
+					if strings.HasSuffix(strings.ToLower(name), ".gguf") &&
+						strings.Contains(strings.ToLower(name), "mmproj") &&
+						name != info.Name() { // 排除自身
+						mmprojs = append(mmprojs, filepath.Join(dir, name))
+					}
+				}
+				if len(mmprojs) > 0 {
+					model.Mmproj = strings.Join(mmprojs, ",")
 				}
 			}
 

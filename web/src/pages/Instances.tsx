@@ -343,9 +343,17 @@ export default function Instances() {
               onChange={e => setFormData({ ...formData, mmproj: e.target.value })}
             >
               <option value="">无</option>
-              {models.filter(m => m.mmproj || m.path.includes('mmproj')).map(m => (
-                <option key={m.path} value={m.path}>{m.name}</option>
-              ))}
+              {models.filter(m => {
+                // 显示所有包含mmproj的模型（可能是多个，用逗号分隔）
+                if (!m.mmproj) return false
+                const mmprojs = m.mmproj.split(',')
+                return mmprojs.length > 0
+              }).flatMap(m => {
+                // 拆分多个mmproj，每个都作为选项
+                return m.mmproj.split(',').map((mp: string) => (
+                  <option key={mp} value={mp}>{m.name} - {mp.split('/').pop()}</option>
+                ))
+              })}
             </select>
           </div>
 

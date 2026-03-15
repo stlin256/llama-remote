@@ -97,9 +97,13 @@ export default function Models() {
                   </td>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>
                     {model.mmproj ? (
-                      <span style={{ background: 'var(--win-blue)', color: 'white', padding: '1px 4px', fontSize: 9 }}>
-                        {model.mmproj.split('/').pop()}
-                      </span>
+                      <div className="flex gap-1" style={{ flexWrap: 'wrap' }}>
+                        {model.mmproj.split(',').map((mp: string) => (
+                          <span key={mp} style={{ background: 'var(--win-blue)', color: 'white', padding: '1px 4px', fontSize: 9 }}>
+                            {mp.split('/').pop()}
+                          </span>
+                        ))}
+                      </div>
                     ) : '-'}
                   </td>
                 </tr>
