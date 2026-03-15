@@ -407,8 +407,28 @@ func (m *Manager) WatchStatus(wsMgr *websocket.Manager, logMgr *logs.Manager) {
 						wsMgr.BroadcastInstanceStatus(inst.ID, "running")
 						m.saveInstances()
 					}
+				} else if resp.StatusCode == 503 {
+					// 503 可能是加载中，需要检查日志判断是真正错误还是加载中
+					errMsg := extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
+					if strings.Contains(strings.ToLower(errMsg), "error") || strings.Contains(strings.ToLower(errMsg), "failed") || strings.Contains(strings.ToLower(errMsg), "panic") {
+						// 真正的错误
+						log.Printf("WatchStatus: 实例 %s 加载失败: %s", inst.Name, errMsg)
+						inst.Status = "error"
+						inst.PID = 0
+						wsMgr.BroadcastInstanceStatus(inst.ID, "error")
+						wsMgr.BroadcastInstanceError(inst.ID, errMsg)
+						m.saveInstances()
+					} else {
+						// 加载中
+						log.Printf("WatchStatus: 实例 %s 加载中", inst.Name)
+						if inst.Status != "loading" {
+							inst.Status = "loading"
+							wsMgr.BroadcastInstanceStatus(inst.ID, "loading")
+							m.saveInstances()
+						}
+					}
 				} else {
-					// 服务器返回错误，获取错误日志
+					// 其他错误码视为错误
 					log.Printf("WatchStatus: 实例 %s 返回错误: %d", inst.Name, resp.StatusCode)
 					errMsg := extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
 					inst.Status = "error"
