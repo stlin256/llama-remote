@@ -3,10 +3,8 @@ package main
 import (
 	"context"
 	"embed"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -103,19 +101,6 @@ func main() {
 	r.HandleFunc("/api/logout", authMgr.HandleLogout()).Methods("POST")
 	r.HandleFunc("/api/check", authMgr.HandleCheck()).Methods("GET")
 	r.HandleFunc("/api/server/log", logManager.HandleServerLog()).Methods("GET")
-
-	// 调试端口：启动所有停止的实例
-	r.HandleFunc("/api/debug/start-all", func(w http.ResponseWriter, r *http.Request) {
-		instances := instanceMgr.List()
-		for _, inst := range instances {
-			if inst.Status == "stopped" {
-				log.Printf("调试：启动实例 %s", inst.Name)
-				instanceMgr.Start(inst.ID)
-			}
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
-	}).Methods("POST")
 
 	// 受保护的API路由
 	api := r.PathPrefix("/api").Subrouter()

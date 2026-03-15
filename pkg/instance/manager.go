@@ -2,7 +2,6 @@ package instance
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -340,31 +339,20 @@ func (m *Manager) WatchStatus(wsMgr *websocket.Manager, logMgr *logs.Manager) {
 		Timeout: 2 * time.Second,
 	}
 
-	log.Println("WatchStatus: 开始监控实例状态")
-
-	// 打印所有实例信息
-	for id, inst := range m.instances {
-		log.Printf("WatchStatus: 实例 %s (ID=%s, Status=%s, Port=%d, PID=%d)", inst.Name, id, inst.Status, inst.Port, inst.PID)
-	}
-
 	for range ticker.C {
 		m.mu.Lock()
 		for _, inst := range m.instances {
 			// 检查运行中或加载中的实例
 			if (inst.Status == "running" || inst.Status == "loading") && inst.PID > 0 {
-				log.Printf("WatchStatus: 检查实例 %s (PID=%d, Status=%s)", inst.Name, inst.PID, inst.Status)
-
 				// 检查进程是否存在 - 使用 signal 0 来检测
 				proc, err := os.FindProcess(inst.PID)
 				if err != nil || proc.Pid < 0 {
-					log.Printf("WatchStatus: 实例 %s 进程不存在", inst.Name)
 					// 进程不存在，获取错误日志
 					errMsg := extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
 					inst.Status = "error"
 					inst.PID = 0
 					wsMgr.BroadcastInstanceStatus(inst.ID, "error")
 					if errMsg != "" {
-						log.Printf("WatchStatus: 实例 %s 错误信息: %s", inst.Name, errMsg)
 						wsMgr.BroadcastInstanceError(inst.ID, errMsg)
 					}
 					m.saveInstances()
@@ -384,10 +372,8 @@ func (m *Manager) WatchStatus(wsMgr *websocket.Manager, logMgr *logs.Manager) {
 
 				// 检查服务器是否在响应
 				url := fmt.Sprintf("http://127.0.0.1:%d/health", port)
-				log.Printf("WatchStatus: 检查 %s", url)
 				resp, err := httpClient.Get(url)
 				if err != nil {
-					log.Printf("WatchStatus: 实例 %s 连接失败: %v", inst.Name, err)
 					// 服务器未响应，可能是加载中
 					if inst.Status != "loading" {
 						inst.Status = "loading"
@@ -397,11 +383,9 @@ func (m *Manager) WatchStatus(wsMgr *websocket.Manager, logMgr *logs.Manager) {
 					continue
 				}
 				resp.Body.Close()
-				log.Printf("WatchStatus: 实例 %s 返回状态码: %d", inst.Name, resp.StatusCode)
 
 				if resp.StatusCode == 200 {
 					// 服务器已就绪
-					log.Printf("WatchStatus: 实例 %s 已就绪", inst.Name)
 					if inst.Status != "running" {
 						inst.Status = "running"
 						wsMgr.BroadcastInstanceStatus(inst.ID, "running")
@@ -412,7 +396,6 @@ func (m *Manager) WatchStatus(wsMgr *websocket.Manager, logMgr *logs.Manager) {
 					errMsg := extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
 					if strings.Contains(strings.ToLower(errMsg), "error") || strings.Contains(strings.ToLower(errMsg), "failed") || strings.Contains(strings.ToLower(errMsg), "panic") {
 						// 真正的错误
-						log.Printf("WatchStatus: 实例 %s 加载失败: %s", inst.Name, errMsg)
 						inst.Status = "error"
 						inst.PID = 0
 						wsMgr.BroadcastInstanceStatus(inst.ID, "error")
@@ -420,7 +403,6 @@ func (m *Manager) WatchStatus(wsMgr *websocket.Manager, logMgr *logs.Manager) {
 						m.saveInstances()
 					} else {
 						// 加载中
-						log.Printf("WatchStatus: 实例 %s 加载中", inst.Name)
 						if inst.Status != "loading" {
 							inst.Status = "loading"
 							wsMgr.BroadcastInstanceStatus(inst.ID, "loading")
@@ -429,13 +411,11 @@ func (m *Manager) WatchStatus(wsMgr *websocket.Manager, logMgr *logs.Manager) {
 					}
 				} else {
 					// 其他错误码视为错误
-					log.Printf("WatchStatus: 实例 %s 返回错误: %d", inst.Name, resp.StatusCode)
 					errMsg := extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
 					inst.Status = "error"
 					inst.PID = 0
 					wsMgr.BroadcastInstanceStatus(inst.ID, "error")
 					if errMsg != "" {
-						log.Printf("WatchStatus: 实例 %s 错误信息: %s", inst.Name, errMsg)
 						wsMgr.BroadcastInstanceError(inst.ID, errMsg)
 					}
 					m.saveInstances()
