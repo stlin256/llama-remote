@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { FolderOpen, RefreshCw, Search } from 'lucide-react'
 import { useStore } from '../store'
 import { api } from '../hooks/api'
+import { useTranslation } from '../i18n/useTranslation'
 
 export default function Models() {
   const { models, setModels, config } = useStore()
+  const { t } = useTranslation()
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
 
@@ -46,7 +48,7 @@ export default function Models() {
         <div>
           <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>模型库</h2>
           <p className="text-sm" style={{ color: 'var(--win-gray-dark)', marginTop: 4 }}>
-            目录: {config?.paths.models_dir || '未设置'}
+            {t('directory')}: {config?.paths.models_dir || t('notSet')}
           </p>
         </div>
         <button onClick={scanModels} disabled={loading} className="btn">
@@ -62,7 +64,7 @@ export default function Models() {
           type="text"
           className="input"
           style={{ paddingLeft: 28, width: 200 }}
-          placeholder="搜索模型..."
+          placeholder={t('searchModels')}
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -71,7 +73,7 @@ export default function Models() {
       {filteredModels.length === 0 ? (
         <div className="panel" style={{ padding: 32, textAlign: 'center' }}>
           <FolderOpen size={32} style={{ marginBottom: 8, opacity: 0.5 }} />
-          <p>{config?.paths.models_dir ? '未找到模型文件' : '请先在设置中配置模型目录'}</p>
+          <p>{config?.paths.models_dir ? t('noModelsFound') : t('configureModels')}</p>
         </div>
       ) : (
         <div className="panel" style={{ padding: 0 }}>

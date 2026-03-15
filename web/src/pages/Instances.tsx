@@ -6,6 +6,7 @@ import type { Instance, ModelInfo } from '../types'
 import Modal from '../components/Modal'
 import { confirm } from '../components/ConfirmDialog'
 import { error } from '../components/MessageDialog'
+import { useTranslation } from '../i18n/useTranslation'
 
 const DEFAULT_PARAMS = {
   ngl: 999,
@@ -60,7 +61,8 @@ Before taking any action (either tool calls *or* responses to the user), you mus
 Reasoning: high`
 
 export default function Instances() {
-  const { instances, models, prompts, addInstance, updateInstance, removeInstance } = useStore()
+  const { instances, models, prompts, addInstance, updateInstance, removeInstance, language } = useStore()
+  const { t } = useTranslation()
   const [showModal, setShowModal] = useState(false)
   const [editingInstance, setEditingInstance] = useState<Instance | null>(null)
   const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null)
@@ -85,10 +87,10 @@ export default function Instances() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'running': return '运行中'
-      case 'starting': return '加载中'
-      case 'stopped': return '已停止'
-      case 'error': return '崩溃'
+      case 'running': return t('running')
+      case 'starting': return t('loading')
+      case 'stopped': return t('stopped')
+      case 'error': return t('crashed')
       default: return status
     }
   }
@@ -133,13 +135,13 @@ export default function Instances() {
   const validateAndSubmit = async () => {
     // Validate instance name
     if (!formData.name || formData.name.trim() === '') {
-      await error('实例名称不能为空')
+      await error(t('instanceNameRequired'))
       return
     }
 
     // Validate model
     if (!formData.model) {
-      await error('请选择模型')
+      await error(t('pleaseSelectModel'))
       return
     }
 
@@ -165,7 +167,7 @@ export default function Instances() {
         updateInstance(editingInstance.id, finalData)
         // If instance was running, ask to restart
         if (editingInstance.status === 'running') {
-          if (await confirm('实例正在运行，修改已保存。是否重新启动以应用更改？')) {
+          if (await confirm(language === 'zh' ? '实例正在运行，修改已保存。是否重新启动以应用更改？' : t('instanceRunningRestart'))) {
             await api.stopInstance(editingInstance.id)
             await api.startInstance(editingInstance.id)
             updateInstance(editingInstance.id, { status: 'starting' })
@@ -176,7 +178,7 @@ export default function Instances() {
         addInstance(created)
         setShowModal(false)
         // Ask to start the new instance
-        if (await confirm('实例创建成功，是否立即启动？')) {
+        if (await confirm(language === 'zh' ? '实例创建成功，是否立即启动？' : t('instanceCreatedStart'))) {
           await api.startInstance(created.id)
           updateInstance(created.id, { status: 'starting' })
         }
@@ -189,7 +191,7 @@ export default function Instances() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!await confirm('确定要删除这个实例吗?')) return
+    if (!await confirm(language === 'zh' ? '确定要删除这个实例吗?' : t('confirmDeleteInstance'))) return
     try {
       await api.deleteInstance(id)
       removeInstance(id)
@@ -258,7 +260,7 @@ export default function Instances() {
                 <tr key={instance.id}>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{instance.name}</td>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>
-                    {instance.model?.split('/').pop() || '未设置'}
+                    {instance.model?.split('/').pop() || t('notSet')}
                   </td>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{instance.port || instance.params?.port || 'N/A'}</td>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{instance.params?.ngl ?? 'N/A'}</td>
@@ -301,7 +303,7 @@ export default function Instances() {
       )}
 
       {/* Modal */}
-      <Modal title={editingInstance ? '编辑实例' : '新建实例'} show={showModal} onClose={() => setShowModal(false)} width={500}>
+      <Modal title={editingInstance ? t('editInstance') : t('createInstance')} show={showModal} onClose={() => setShowModal(false)} width={500}>
         <div className="flex flex-col gap-4">
           <div>
             <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>实例名称 *</label>
@@ -311,7 +313,7 @@ export default function Instances() {
               style={{ width: '100%' }}
               value={formData.name || ''}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
-              placeholder="必填"
+              placeholder={language === 'zh' ? '必填' : 'Required'}
             />
           </div>
 
@@ -438,7 +440,7 @@ export default function Instances() {
                     ...formData,
                     params: { ...formData.params, threads: parseInt(e.target.value) || undefined }
                   })}
-                  placeholder="自动"
+                  placeholder={t('auto')}
                 />
               </div>
             </div>

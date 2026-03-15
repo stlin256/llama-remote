@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useStore } from '../store'
 import { api } from '../hooks/api'
+import { useTranslation } from '../i18n/useTranslation'
 
 export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { setAuthenticated } = useStore()
+  const { t } = useTranslation()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -17,7 +19,7 @@ export default function Login() {
       await api.login(password)
       setAuthenticated(true)
     } catch (err) {
-      setError('密码错误')
+      setError(t('passwordError'))
     } finally {
       setLoading(false)
     }
@@ -55,7 +57,7 @@ export default function Login() {
         width: 320,
       }}>
         <div className="title-bar">
-          <span>系统登录</span>
+          <span>{t('login')}</span>
           <div className="title-bar-buttons">
             <div className="title-bar-btn">X</div>
           </div>
@@ -72,7 +74,7 @@ export default function Login() {
                   />
                 </div>
                 <div style={{ textAlign: 'center', fontSize: 11, color: '#666' }}>
-                  Llama Remote - 输入密码登录
+                  Llama Remote - {t('passwordRequired')}
                 </div>
               </div>
 
@@ -84,7 +86,7 @@ export default function Login() {
                   style={{ width: '100%' }}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="请输入密码"
+                  placeholder={t('enterPassword')}
                   autoFocus
                   disabled={loading}
                 />
@@ -103,7 +105,7 @@ export default function Login() {
                 className="btn btn-primary"
                 disabled={loading || !password}
               >
-                {loading ? '登录中...' : '登录'}
+                {loading ? t('loggingIn') : t('login')}
               </button>
             </div>
           </form>

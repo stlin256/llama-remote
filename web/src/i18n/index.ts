@@ -50,6 +50,12 @@ export const zh = {
   confirmDeleteMsg: '此操作不可撤销',
   startAll: '全部启动',
   stopAll: '全部停止',
+  instanceNameRequired: '实例名称不能为空',
+  pleaseSelectModel: '请选择模型',
+  instanceRunningRestart: '实例正在运行，修改已保存。是否重新启动以应用更改？',
+  instanceCreatedStart: '实例创建成功，是否立即启动？',
+  confirmDeleteInstance: '确定要删除这个实例吗?',
+  auto: '自动',
 
   // Status
   status: '状态',
@@ -58,6 +64,7 @@ export const zh = {
   starting: '启动中',
   loading: '加载中',
   notSet: '未设置',
+  crashed: '崩溃',
 
   // Models
   modelList: '模型列表',
@@ -67,6 +74,10 @@ export const zh = {
   modelSize: '大小',
   modelModified: '修改时间',
   refresh: '刷新',
+  directory: '目录',
+  searchModels: '搜索模型...',
+  noModelsFound: '未找到模型文件',
+  configureModels: '请先在设置中配置模型目录',
 
   // Templates
   templateManagement: '模板管理',
@@ -78,6 +89,13 @@ export const zh = {
   templatePreview: '模板预览',
   clearAll: '清空所有',
   confirmClearAll: '确定要删除所有自定义提示词吗?',
+  promptSaved: '保存成功!',
+  promptDeleted: '删除成功!',
+  promptsCleared: '已清除所有自定义提示词!',
+  fillTemplateNameContent: '请填写模板名称和内容',
+  templatePlaceholder: '代码助手',
+  promptContentPlaceholder: '你是一个专业的编程助手...',
+  noCustomTemplates: '暂无自定义提示词模板',
 
   // Logs
   selectInstance: '选择实例...',
@@ -107,6 +125,9 @@ export const zh = {
   logout: '退出',
   passwordRequired: '请输入密码',
   loginFailed: '登录失败',
+  passwordError: '密码错误',
+  loggingIn: '登录中...',
+  enterPassword: '请输入密码',
 
   // Common
   save: '保存',
@@ -172,6 +193,12 @@ export const en = {
   confirmDeleteMsg: 'This action cannot be undone',
   startAll: 'Start All',
   stopAll: 'Stop All',
+  instanceNameRequired: 'Instance name cannot be empty',
+  pleaseSelectModel: 'Please select a model',
+  instanceRunningRestart: 'Instance is running. Restart to apply changes?',
+  instanceCreatedStart: 'Instance created. Start now?',
+  confirmDeleteInstance: 'Delete this instance?',
+  auto: 'Auto',
 
   // Status
   status: 'Status',
@@ -180,6 +207,7 @@ export const en = {
   starting: 'Starting',
   loading: 'Loading',
   notSet: 'Not set',
+  crashed: 'Crashed',
 
   // Models
   modelList: 'Model List',
@@ -189,6 +217,10 @@ export const en = {
   modelSize: 'Size',
   modelModified: 'Modified',
   refresh: 'Refresh',
+  directory: 'Directory',
+  searchModels: 'Search models...',
+  noModelsFound: 'No model files found',
+  configureModels: 'Please configure models directory in settings first',
 
   // Templates
   templateManagement: 'Template Management',
@@ -200,6 +232,13 @@ export const en = {
   templatePreview: 'Template Preview',
   clearAll: 'Clear All',
   confirmClearAll: 'Delete all custom prompts?',
+  promptSaved: 'Saved!',
+  promptDeleted: 'Deleted!',
+  promptsCleared: 'All custom prompts cleared!',
+  fillTemplateNameContent: 'Please fill in template name and content',
+  templatePlaceholder: 'Code Assistant',
+  promptContentPlaceholder: 'You are a professional coding assistant...',
+  noCustomTemplates: 'No custom prompt templates',
 
   // Logs
   selectInstance: 'Select instance...',
@@ -229,6 +268,9 @@ export const en = {
   logout: 'Logout',
   passwordRequired: 'Please enter password',
   loginFailed: 'Login failed',
+  passwordError: 'Wrong password',
+  loggingIn: 'Logging in...',
+  enterPassword: 'Please enter password',
 
   // Common
   save: 'Save',

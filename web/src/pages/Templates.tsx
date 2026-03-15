@@ -6,6 +6,7 @@ import type { PromptTemplate } from '../types'
 import Modal from '../components/Modal'
 import { confirm } from '../components/ConfirmDialog'
 import { success, error } from '../components/MessageDialog'
+import { useTranslation } from '../i18n/useTranslation'
 
 const DEFAULT_PROMPT_TEMPLATE: PromptTemplate = {
   name: '默认提示词 (强推理模型)',
@@ -56,6 +57,7 @@ Reasoning: high`
 
 export default function Templates() {
   const { prompts, setPrompts } = useStore()
+  const { t, language } = useTranslation()
   const [showPromptModal, setShowPromptModal] = useState(false)
   const [promptForm, setPromptForm] = useState<Partial<PromptTemplate>>({
     name: '',
@@ -67,7 +69,7 @@ export default function Templates() {
 
   const handleSavePrompt = async () => {
     if (!promptForm.name || !promptForm.content) {
-      await error('请填写模板名称和内容')
+      await error(t('fillTemplateNameContent'))
       return
     }
     try {
@@ -84,7 +86,7 @@ export default function Templates() {
       setPrompts(newPrompts)
       setShowPromptModal(false)
       setPromptForm({ name: '', content: '' })
-      await success('保存成功!')
+      await success(t('promptSaved'))
     } catch (e) {
       await error(`保存失败: ${e}`)
     }
@@ -101,18 +103,18 @@ export default function Templates() {
       } else {
         setPrompts([])
       }
-      await success('删除成功!')
+      await success(t('promptDeleted'))
     } catch (e) {
       await error(`删除失败: ${e}`)
     }
   }
 
   const handleClearAll = async () => {
-    if (!await confirm('确定要删除所有自定义提示词吗?')) return
+    if (!await confirm(t('confirmClearAll'))) return
     try {
       await api.clearPrompts()
       setPrompts([])
-      await success('已清除所有自定义提示词!')
+      await success(t('promptsCleared'))
     } catch (e) {
       await error(`清除失败: ${e}`)
     }
@@ -216,7 +218,7 @@ export default function Templates() {
       </div>
 
       {/* Prompt Modal */}
-      <Modal title="新建提示词模板" show={showPromptModal} onClose={() => setShowPromptModal(false)} width={500}>
+      <Modal title={t('createTemplate')} show={showPromptModal} onClose={() => setShowPromptModal(false)} width={500}>
         <div className="flex flex-col gap-4">
           <div>
             <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>模板名称</label>
@@ -226,7 +228,7 @@ export default function Templates() {
               style={{ width: '100%' }}
               value={promptForm.name || ''}
               onChange={e => setPromptForm({ ...promptForm, name: e.target.value })}
-              placeholder="代码助手"
+              placeholder={language === 'zh' ? '代码助手' : t('templatePlaceholder')}
             />
           </div>
           <div>
@@ -236,7 +238,7 @@ export default function Templates() {
               style={{ width: '100%', minHeight: 150, fontFamily: 'monospace', fontSize: 10 }}
               value={promptForm.content || ''}
               onChange={e => setPromptForm({ ...promptForm, content: e.target.value })}
-              placeholder="你是一个专业的编程助手..."
+              placeholder={language === 'zh' ? '你是一个专业的编程助手...' : t('promptContentPlaceholder')}
             />
           </div>
         </div>
