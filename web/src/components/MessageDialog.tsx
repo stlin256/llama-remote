@@ -50,27 +50,38 @@ function MessageDialog({ show, title, message, type, onClose }: MessageDialogPro
   )
 }
 
+// Get language from localStorage
+function getLang(): string {
+  return localStorage.getItem('language') || 'zh'
+}
+
 // Global message state
 let messageResolve: (() => void) | null = null
 
-export function message(msg: string, type: MessageType = 'info', title: string = '提示'): Promise<void> {
+export function message(msg: string, type: MessageType = 'info', title?: string): Promise<void> {
+  const lang = getLang()
+  const defaultTitles: Record<string, Record<string, string>> = {
+    zh: { info: '提示', success: '成功', error: '错误', warning: '警告' },
+    en: { info: 'Info', success: 'Success', error: 'Error', warning: 'Warning' }
+  }
+  const finalTitle = title || defaultTitles[lang][type] || 'Info'
   return new Promise((resolve) => {
     messageResolve = resolve
     window.dispatchEvent(new CustomEvent('showMessage', {
-      detail: { message: msg, type, title }
+      detail: { message: msg, type, title: finalTitle }
     }))
   })
 }
 
-export function success(msg: string, title: string = '成功') {
+export function success(msg: string, title?: string) {
   return message(msg, 'success', title)
 }
 
-export function error(msg: string, title: string = '错误') {
+export function error(msg: string, title?: string) {
   return message(msg, 'error', title)
 }
 
-export function info(msg: string, title: string = '提示') {
+export function info(msg: string, title?: string) {
   return message(msg, 'info', title)
 }
 

@@ -4,7 +4,7 @@ import { useTranslation } from '../i18n/useTranslation'
 
 export default function Dashboard() {
   const { instances, gpuStats, systemStats } = useStore()
-  const { t, language } = useTranslation()
+  const { t } = useTranslation()
 
   const runningInstances = instances.filter(i => i.status === 'running')
 
@@ -96,7 +96,7 @@ export default function Dashboard() {
             <thead>
               <tr style={{ background: 'var(--win-gray)', textAlign: 'left' }}>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('name')}</th>
-                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{language === 'zh' ? '模型' : 'Model'}</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('model')}</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('port')}</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('status')}</th>
               </tr>

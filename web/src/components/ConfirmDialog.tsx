@@ -46,14 +46,21 @@ function ConfirmDialog({ show, title, message, onConfirm, onCancel }: ConfirmDia
   )
 }
 
+// Get language from localStorage
+function getLang(): string {
+  return localStorage.getItem('language') || 'zh'
+}
+
 // Global confirm state
 let confirmResolve: ((value: boolean) => void) | null = null
 
-export function confirm(message: string, title: string = '确认'): Promise<boolean> {
+export function confirm(message: string, title?: string): Promise<boolean> {
+  const lang = getLang()
+  const defaultTitle = lang === 'zh' ? '确认' : 'Confirm'
   return new Promise((resolve) => {
     confirmResolve = resolve
     window.dispatchEvent(new CustomEvent('showConfirm', {
-      detail: { message, title }
+      detail: { message, title: title || defaultTitle }
     }))
   })
 }
