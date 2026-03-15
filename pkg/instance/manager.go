@@ -2,6 +2,7 @@ package instance
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -323,14 +324,26 @@ func (m *Manager) StopAll() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	// First kill all tracked instances
 	for _, inst := range m.instances {
 		if inst.PID > 0 {
-			// Use kill command to send SIGKILL
-			exec.Command("kill", "-9", fmt.Sprintf("%d", inst.PID)).Run()
+			log.Printf("StopAll: killing PID %d (%s)", inst.PID, inst.Name)
+			cmd := exec.Command("kill", "-9", fmt.Sprintf("%d", inst.PID))
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				log.Printf("StopAll: kill failed: %v, output: %s", err, string(output))
+			}
 			inst.Status = "stopped"
 			inst.PID = 0
 		}
 	}
+
+	// Also kill any llama-server processes not in our list
+	log.Printf("StopAll: scanning for orphaned llama-server processes")
+	cmd := exec.Command("bash", "-c", "pkill -9 llama-server || true")
+	output, err := cmd.CombinedOutput()
+	log.Printf("StopAll: pkill output: %s, err: %v", string(output), err)
+
 	m.saveInstances()
 }
 
