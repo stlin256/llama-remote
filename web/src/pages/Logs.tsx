@@ -85,56 +85,55 @@ export default function Logs() {
       </div>
 
       {/* Log content */}
-      <div className="panel" style={{ flex: 1, overflow: 'hidden', padding: 0 }}>
-        <div
-          ref={scrollRef}
-          style={{ height: '100%', overflow: 'auto', padding: 8, fontFamily: 'monospace', fontSize: 10 }}
-        >
-          {filteredLogs.length === 0 ? (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--win-gray-dark)' }}>
-              <div className="flex items-center">
-                <ScrollText size={32} style={{ opacity: 0.5 }} />
-                <span style={{ marginLeft: 8 }}>暂无日志</span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              {filteredLogs.map((log, idx) => {
-                const level = getLogLevel(log.content)
-                return (
-                  <div
-                    key={idx}
-                    style={{
-                      padding: '2px 4px',
-                      background: level === 'error' ? '#ffcccc' : level === 'warning' ? '#ffffcc' : 'transparent',
-                      color: level === 'error' ? '#aa0000' : level === 'warning' ? '#aa8800' : 'inherit',
-                    }}
-                  >
-                    <span style={{ color: 'var(--win-gray-dark)', marginRight: 8 }}>
-                      {new Date(log.timestamp).toLocaleTimeString()}
-                    </span>
-                    <span style={{ color: 'var(--win-gray-dark)', marginRight: 8 }}>[{log.instance}]</span>
-                    <span>{log.content}</span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Server Logs Panel */}
-        {showServerLogs && (
-          <div className="panel" style={{ flex: 1, overflow: 'auto', padding: 8 }}>
-            <div className="flex items-center justify-between mb-2">
-              <span style={{ fontWeight: 'bold' }}>服务器日志</span>
-              <button onClick={() => setShowServerLogs(false)} className="btn" style={{ padding: '2px 8px' }}>关闭</button>
-            </div>
-            <pre style={{ fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-              {serverLogs.join('\n')}
-            </pre>
+      {showServerLogs ? (
+        <div className="panel" style={{ flex: 1, overflow: 'auto', padding: 8 }}>
+          <div className="flex items-center justify-between mb-2">
+            <span style={{ fontWeight: 'bold' }}>服务器日志</span>
+            <button onClick={() => setShowServerLogs(false)} className="btn" style={{ padding: '2px 8px' }}>关闭</button>
           </div>
-        )}
-      </div>
+          <pre style={{ fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+            {serverLogs.join('\n')}
+          </pre>
+        </div>
+      ) : (
+        <div className="panel" style={{ flex: 1, overflow: 'hidden', padding: 0 }}>
+          <div
+            ref={scrollRef}
+            style={{ height: '100%', overflow: 'auto', padding: 8, fontFamily: 'monospace', fontSize: 10 }}
+          >
+            {filteredLogs.length === 0 ? (
+              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--win-gray-dark)' }}>
+                <div className="flex items-center">
+                  <ScrollText size={32} style={{ opacity: 0.5 }} />
+                  <span style={{ marginLeft: 8 }}>暂无日志</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {filteredLogs.map((log, idx) => {
+                  const level = getLogLevel(log.content)
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '2px 4px',
+                        background: level === 'error' ? '#ffcccc' : level === 'warning' ? '#ffffcc' : 'transparent',
+                        color: level === 'error' ? '#aa0000' : level === 'warning' ? '#aa8800' : 'inherit',
+                      }}
+                    >
+                      <span style={{ color: 'var(--win-gray-dark)', marginRight: 8 }}>
+                        {new Date(log.timestamp).toLocaleTimeString()}
+                      </span>
+                      <span style={{ color: 'var(--win-gray-dark)', marginRight: 8 }}>[{log.instance}]</span>
+                      <span>{log.content}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
