@@ -342,6 +342,11 @@ func (m *Manager) WatchStatus(wsMgr *websocket.Manager, logMgr *logs.Manager) {
 
 	log.Println("WatchStatus: 开始监控实例状态")
 
+	// 打印所有实例信息
+	for id, inst := range m.instances {
+		log.Printf("WatchStatus: 实例 %s (ID=%s, Status=%s, Port=%d, PID=%d)", inst.Name, id, inst.Status, inst.Port, inst.PID)
+	}
+
 	for range ticker.C {
 		m.mu.Lock()
 		for _, inst := range m.instances {
