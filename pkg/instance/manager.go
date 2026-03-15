@@ -2,6 +2,7 @@ package instance
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -323,21 +324,57 @@ func (m *Manager) StopAll() {
 }
 
 func (m *Manager) WatchStatus(wsMgr *websocket.Manager) {
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 
+	// 创建带超时的HTTP客户端
+	httpClient := &http.Client{
+		Timeout: 2 * time.Second,
+	}
+
 	for range ticker.C {
-		m.mu.RLock()
+		m.mu.Lock()
 		for _, inst := range m.instances {
-			if inst.Status == "running" && inst.PID > 0 {
+			// 检查运行中或加载中的实例
+			if (inst.Status == "running" || inst.Status == "loading") && inst.PID > 0 {
+				// 检查进程是否存在
 				proc, err := os.FindProcess(inst.PID)
 				if err != nil || proc.Pid < 0 {
+					inst.Status = "error"
+					wsMgr.BroadcastInstanceStatus(inst.ID, "error")
+					m.saveInstances()
+					continue
+				}
+
+				// 检查服务器是否在响应
+				url := fmt.Sprintf("http://127.0.0.1:%d/health", inst.Port)
+				resp, err := httpClient.Get(url)
+				if err != nil {
+					// 服务器未响应，可能是加载中
+					if inst.Status != "loading" {
+						inst.Status = "loading"
+						wsMgr.BroadcastInstanceStatus(inst.ID, "loading")
+						m.saveInstances()
+					}
+					continue
+				}
+				resp.Body.Close()
+
+				if resp.StatusCode == 200 {
+					// 服务器已就绪
+					if inst.Status != "running" {
+						inst.Status = "running"
+						wsMgr.BroadcastInstanceStatus(inst.ID, "running")
+						m.saveInstances()
+					}
+				} else {
+					// 服务器返回错误，可能是加载失败
 					inst.Status = "error"
 					wsMgr.BroadcastInstanceStatus(inst.ID, "error")
 					m.saveInstances()
 				}
 			}
 		}
-		m.mu.RUnlock()
+		m.mu.Unlock()
 	}
 }
