@@ -1,12 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
-import { ScrollText, Search, Trash2 } from 'lucide-react'
+import { ScrollText, Search, Trash2, Terminal } from 'lucide-react'
 import { useStore } from '../store'
+import { api } from '../hooks/api'
 
 export default function Logs() {
   const { logs, clearLogs } = useStore()
   const [filter, setFilter] = useState('')
   const [levelFilter, setLevelFilter] = useState<string>('all')
+  const [serverLogs, setServerLogs] = useState<string[]>([])
+  const [showServerLogs, setShowServerLogs] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const loadServerLogs = async () => {
+    try {
+      const data = await api.getServerLogs(100)
+      setServerLogs(data.logs || [])
+      setShowServerLogs(true)
+    } catch (e) {
+      console.error('Failed to load server logs:', e)
+    }
+  }
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -32,10 +45,16 @@ export default function Logs() {
     <div className="flex flex-col gap-4" style={{ height: '100%' }}>
       <div className="flex items-center justify-between">
         <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>日志</h2>
-        <button onClick={clearLogs} className="btn">
-          <Trash2 size={12} style={{ marginRight: 4 }} />
-          清空
-        </button>
+        <div className="flex gap-2">
+          <button onClick={loadServerLogs} className="btn">
+            <Terminal size={12} style={{ marginRight: 4 }} />
+            服务器日志
+          </button>
+          <button onClick={clearLogs} className="btn">
+            <Trash2 size={12} style={{ marginRight: 4 }} />
+            清空
+          </button>
+        </div>
       </div>
 
       {/* Search and filter */}
@@ -102,6 +121,19 @@ export default function Logs() {
             </div>
           )}
         </div>
+
+        {/* Server Logs Panel */}
+        {showServerLogs && (
+          <div className="panel" style={{ flex: 1, overflow: 'auto', padding: 8 }}>
+            <div className="flex items-center justify-between mb-2">
+              <span style={{ fontWeight: 'bold' }}>服务器日志</span>
+              <button onClick={() => setShowServerLogs(false)} className="btn" style={{ padding: '2px 8px' }}>关闭</button>
+            </div>
+            <pre style={{ fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+              {serverLogs.join('\n')}
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -89,6 +89,9 @@ export const api = {
 
   // System
   getSystem: () => request<any>('/api/system'),
+
+  // Server logs (debug)
+  getServerLogs: (lines: number = 100) => request<any>(`/api/server/log?lines=${lines}`),
 }
 
 // WebSocket连接

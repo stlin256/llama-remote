@@ -143,6 +143,7 @@ func main() {
 	// 日志API
 	api.HandleFunc("/logs", logManager.HandleGet()).Methods("GET")
 	api.HandleFunc("/logs/stream", logManager.HandleStream(wsMgr)).Methods("GET")
+	api.HandleFunc("/server/log", logManager.HandleServerLog()).Methods("GET")
 
 	// WebSocket
 	r.HandleFunc("/ws", wsMgr.Handle)

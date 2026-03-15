@@ -2,6 +2,7 @@ package logs
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -65,5 +66,33 @@ func (m *Manager) HandleGet() http.HandlerFunc {
 func (m *Manager) HandleStream(wsMgr interface{}) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// WebSocket流处理在websocket包中
+	}
+}
+
+// HandleServerLog 获取服务器日志
+func (m *Manager) HandleServerLog() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		lines := r.URL.Query().Get("lines")
+		maxLines := 100
+		if lines != "" {
+			fmt.Sscanf(lines, "%d", &maxLines)
+		}
+
+		// 读取服务器日志
+		logFile := "/tmp/llama-remote.log"
+		data, err := os.ReadFile(logFile)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{"logs": []string{}, "error": err.Error()})
+			return
+		}
+
+		logLines := strings.Split(string(data), "\n")
+		if len(logLines) > maxLines {
+			logLines = logLines[len(logLines)-maxLines:]
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"logs": logLines})
 	}
 }
