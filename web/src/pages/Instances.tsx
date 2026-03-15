@@ -60,7 +60,7 @@ Before taking any action (either tool calls *or* responses to the user), you mus
 Reasoning: high`
 
 export default function Instances() {
-  const { instances, models, addInstance, updateInstance, removeInstance } = useStore()
+  const { instances, models, prompts, addInstance, updateInstance, removeInstance } = useStore()
   const [showModal, setShowModal] = useState(false)
   const [editingInstance, setEditingInstance] = useState<Instance | null>(null)
   const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null)
@@ -246,8 +246,9 @@ export default function Instances() {
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>名称</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>模型</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>端口</th>
-                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>GPU层</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>GPU</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>Ctx</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>MM</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>状态</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)', width: 120 }}>操作</th>
               </tr>
@@ -261,7 +262,14 @@ export default function Instances() {
                   </td>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{instance.port || instance.params?.port || 'N/A'}</td>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{instance.params?.ngl ?? 'N/A'}</td>
-                  <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{instance.params?.context ?? 'N/A'}</td>
+                  <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{instance.params?.context ? Math.round(instance.params.context / 1024) + 'k' : 'N/A'}</td>
+                  <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>
+                    {instance.mmproj ? (
+                      <span style={{ background: 'var(--win-teal)', color: 'white', padding: '1px 4px', fontSize: 9 }}>
+                        {instance.mmproj.split('/').pop()?.slice(0, 8)}
+                      </span>
+                    ) : '-'}
+                  </td>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>
                     <span className={`status-dot status-${instance.status}`} style={{ marginRight: 4 }} />
                     {getStatusText(instance.status)}
@@ -343,17 +351,14 @@ export default function Instances() {
               onChange={e => setFormData({ ...formData, mmproj: e.target.value })}
             >
               <option value="">无</option>
-              {models.filter(m => {
-                // 显示所有包含mmproj的模型（可能是多个，用逗号分隔）
-                if (!m.mmproj) return false
-                const mmprojs = m.mmproj.split(',')
-                return mmprojs.length > 0
-              }).flatMap(m => {
-                // 拆分多个mmproj，每个都作为选项
-                const mmprojList = m.mmproj!.split(',')
-                return mmprojList.map((mp: string) => (
-                  <option key={mp} value={mp}>{m.name} - {mp.split('/').pop()}</option>
-                ))
+              {models.flatMap(m => {
+                // 显示所有模型，如果有mmproj则显示
+                return [
+                  <option key={m.name + '-none'} value="">无 - {m.name}</option>,
+                  ...(m.mmproj ? m.mmproj.split(',').map((mp: string) => (
+                    <option key={mp} value={mp}>{m.name} - {mp.split('/').pop()}</option>
+                  )) : [])
+                ]
               })}
             </select>
           </div>
@@ -368,6 +373,9 @@ export default function Instances() {
             >
               <option value="">无</option>
               <option value={DEFAULT_PROMPT_TEMPLATE}>默认提示词 (强推理模型)</option>
+              {prompts.map((p) => (
+                <option key={p.name} value={p.content}>{p.name}</option>
+              ))}
             </select>
             {formData.prompt_template && (
               <div className="panel" style={{ marginTop: 8, padding: 8, maxHeight: 120, overflow: 'auto', fontSize: 10 }}>

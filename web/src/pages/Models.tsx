@@ -99,7 +99,7 @@ export default function Models() {
                     {model.mmproj ? (
                       <div className="flex gap-1" style={{ flexWrap: 'wrap' }}>
                         {model.mmproj.split(',').map((mp: string) => (
-                          <span key={mp} style={{ background: 'var(--win-blue)', color: 'white', padding: '1px 4px', fontSize: 9 }}>
+                          <span key={mp} style={{ background: 'var(--win-teal)', color: 'white', padding: '1px 4px', fontSize: 9 }}>
                             {mp.split('/').pop()}
                           </span>
                         ))}

@@ -154,18 +154,20 @@ export default function Templates() {
             <span style={{ fontSize: 10, color: 'var(--win-gray-dark)' }}>内置模板，不可删除</span>
           </div>
           <div
+            className="panel"
             style={{
+              marginTop: 8,
+              padding: 8,
+              maxHeight: 120,
+              overflow: 'auto',
               fontSize: 10,
               fontFamily: 'monospace',
-              background: 'var(--win-gray)',
-              padding: 8,
-              maxHeight: 80,
-              overflow: 'auto',
-              whiteSpace: 'pre-wrap',
-              border: '1px solid var(--win-gray-dark)',
             }}
           >
-            {DEFAULT_PROMPT_TEMPLATE.content}
+            <div style={{ fontWeight: 'bold', marginBottom: 4 }}>模板预览:</div>
+            <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
+              {DEFAULT_PROMPT_TEMPLATE.content.slice(0, 500)}{DEFAULT_PROMPT_TEMPLATE.content.length > 500 ? '...' : ''}
+            </pre>
           </div>
         </div>
 
@@ -192,17 +194,20 @@ export default function Templates() {
                   </button>
                 </div>
                 <div
+                  className="panel"
                   style={{
+                    marginTop: 8,
+                    padding: 8,
+                    maxHeight: 120,
+                    overflow: 'auto',
                     fontSize: 10,
                     fontFamily: 'monospace',
-                    background: 'var(--win-gray)',
-                    padding: 8,
-                    maxHeight: 100,
-                    overflow: 'auto',
-                    whiteSpace: 'pre-wrap',
                   }}
                 >
-                  {p.content}
+                  <div style={{ fontWeight: 'bold', marginBottom: 4 }}>模板预览:</div>
+                  <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
+                    {p.content.slice(0, 500)}{p.content.length > 500 ? '...' : ''}
+                  </pre>
                 </div>
               </div>
             ))}

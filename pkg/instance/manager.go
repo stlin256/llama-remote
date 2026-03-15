@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -103,6 +104,12 @@ func (m *Manager) List() []*Instance {
 	for _, inst := range m.instances {
 		result = append(result, inst)
 	}
+
+	// Sort by name for consistent ordering
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
+
 	return result
 }
 
@@ -241,9 +248,9 @@ func (m *Manager) Start(id string) error {
 	}
 
 	// 添加提示词模板参数 (仅当不为空时，且服务器版本支持)
-	// 注意: 某些llama.cpp版本不支持--prompt-template
+	// 注意: llama.cpp server 模式不支持 -sys 参数
 	// if inst.PromptTemplate != "" {
-	// 	args = append(args, "--prompt-template", inst.PromptTemplate)
+	// 	args = append(args, "-sys", inst.PromptTemplate)
 	// }
 
 	// 创建日志文件
