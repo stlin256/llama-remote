@@ -27,6 +27,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const handleStopAll = async () => {
+    if (await confirm('确定要停止所有运行中的实例吗？')) {
+      await api.stopAllInstances()
+      // 刷新实例列表
+      const data = await api.getInstances()
+      setInstances(data as any[])
+    }
+  }
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -129,7 +138,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="title-bar">
           <span>Llama Remote - 控制面板</span>
           <div className="title-bar-buttons">
-            <div className="title-bar-btn">_</div>
+            <div className="title-bar-btn" onClick={handleStopAll} title="停止所有实例" style={{ fontSize: 10, padding: '2px 4px' }}>■</div>
             <div className="title-bar-btn" onClick={handleLogout} title="退出登录">X</div>
           </div>
         </div>

@@ -57,6 +57,9 @@ export const api = {
   stopInstance: (id: string) => request<any>(`/api/instances/${id}/stop`, {
     method: 'POST',
   }),
+  stopAllInstances: () => request<any>('/api/instances/stop-all', {
+    method: 'POST',
+  }),
 
   // 模型
   scanModels: () => request<any>('/api/models'),

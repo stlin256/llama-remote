@@ -120,6 +120,7 @@ func main() {
 	api.HandleFunc("/instances/{id}", instanceMgr.HandleDelete()).Methods("DELETE")
 	api.HandleFunc("/instances/{id}/start", instanceMgr.HandleStart()).Methods("POST")
 	api.HandleFunc("/instances/{id}/stop", instanceMgr.HandleStop()).Methods("POST")
+	api.HandleFunc("/instances/stop-all", instanceMgr.HandleStopAll()).Methods("POST")
 
 	// 模型API
 	api.HandleFunc("/models", modelScanner.HandleScan()).Methods("GET")

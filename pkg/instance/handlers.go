@@ -115,3 +115,12 @@ func (m *Manager) HandleStop() http.HandlerFunc {
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	}
 }
+
+func (m *Manager) HandleStopAll() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		m.StopAll()
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	}
+}
