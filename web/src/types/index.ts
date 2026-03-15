@@ -6,7 +6,7 @@ export interface Instance {
   mmproj: string
   params: InstanceParams
   prompt_template: string
-  status: 'stopped' | 'starting' | 'running' | 'error'
+  status: 'stopped' | 'starting' | 'running' | 'loading' | 'error'
   port?: number
 }
 

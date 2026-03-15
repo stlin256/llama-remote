@@ -91,7 +91,7 @@ func main() {
 	}()
 
 	// 启动实例状态监控
-	go instanceMgr.WatchStatus(wsMgr)
+	go instanceMgr.WatchStatus(wsMgr, logManager)
 
 	// 创建HTTP路由
 	r := mux.NewRouter()

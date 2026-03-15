@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useStore } from '../store'
 import { api, createWebSocket } from '../hooks/api'
 import { confirm } from '../components/ConfirmDialog'
+import { error } from '../components/MessageDialog'
 
 const navItems = [
   { path: '/dashboard', label: '仪表盘' },
@@ -16,7 +17,7 @@ const navItems = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [time, setTime] = useState(new Date())
   const navigate = useNavigate()
-  const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, setSystemStats, setAuthenticated, instances } = useStore()
+  const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, setSystemStats, setAuthenticated, instances, updateInstanceStatus } = useStore()
 
   const handleLogout = async () => {
     if (await confirm('确定要退出登录吗？')) {
@@ -53,14 +54,39 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
+    // WebSocket 监听实时状态更新
     const ws = createWebSocket((data) => {
       if (data.type === 'stats') {
         setGpuStats(data.payload)
       } else if (data.type === 'system') {
         setSystemStats(data.payload)
+      } else if (data.type === 'instance_status') {
+        // 更新实例状态
+        const { id, status } = data.payload
+        updateInstanceStatus(id, status)
+      } else if (data.type === 'instance_error') {
+        // 显示实例错误
+        const { id, message: errMsg } = data.payload
+        const instance = instances.find(i => i.id === id)
+        const name = instance?.name || id
+        error(`实例 "${name}" 错误: ${errMsg}`)
       }
     })
-    return () => ws.close()
+
+    // 定期刷新实例列表作为备份
+    const interval = setInterval(async () => {
+      try {
+        const data = await api.getInstances()
+        setInstances(data as any[])
+      } catch (e) {
+        // ignore
+      }
+    }, 5000)
+
+    return () => {
+      ws.close()
+      clearInterval(interval)
+    }
   }, [])
 
   useEffect(() => {

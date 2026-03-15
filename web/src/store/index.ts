@@ -15,6 +15,7 @@ interface AppState {
   setInstances: (instances: Instance[]) => void
   addInstance: (instance: Instance) => void
   updateInstance: (id: string, updates: Partial<Instance>) => void
+  updateInstanceStatus: (id: string, status: string) => void
   removeInstance: (id: string) => void
 
   // 模型
@@ -60,6 +61,9 @@ export const useStore = create<AppState>((set) => ({
   addInstance: (instance) => set((state) => ({ instances: [...state.instances, instance] })),
   updateInstance: (id, updates) => set((state) => ({
     instances: state.instances.map((i) => i.id === id ? { ...i, ...updates } : i)
+  })),
+  updateInstanceStatus: (id, status) => set((state) => ({
+    instances: state.instances.map((i) => i.id === id ? { ...i, status: status as Instance['status'] } : i)
   })),
   removeInstance: (id) => set((state) => ({
     instances: state.instances.filter((i) => i.id !== id)

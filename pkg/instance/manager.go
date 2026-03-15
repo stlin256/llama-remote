@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -323,7 +324,7 @@ func (m *Manager) StopAll() {
 	}
 }
 
-func (m *Manager) WatchStatus(wsMgr *websocket.Manager) {
+func (m *Manager) WatchStatus(wsMgr *websocket.Manager, logMgr *logs.Manager) {
 	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 
@@ -337,11 +338,17 @@ func (m *Manager) WatchStatus(wsMgr *websocket.Manager) {
 		for _, inst := range m.instances {
 			// 检查运行中或加载中的实例
 			if (inst.Status == "running" || inst.Status == "loading") && inst.PID > 0 {
-				// 检查进程是否存在
+				// 检查进程是否存在 - 使用 signal 0 来检测
 				proc, err := os.FindProcess(inst.PID)
 				if err != nil || proc.Pid < 0 {
+					// 进程不存在，获取错误日志
+					errMsg := extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
 					inst.Status = "error"
+					inst.PID = 0
 					wsMgr.BroadcastInstanceStatus(inst.ID, "error")
+					if errMsg != "" {
+						wsMgr.BroadcastInstanceError(inst.ID, errMsg)
+					}
 					m.saveInstances()
 					continue
 				}
@@ -368,13 +375,39 @@ func (m *Manager) WatchStatus(wsMgr *websocket.Manager) {
 						m.saveInstances()
 					}
 				} else {
-					// 服务器返回错误，可能是加载失败
+					// 服务器返回错误，获取错误日志
+					errMsg := extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
 					inst.Status = "error"
+					inst.PID = 0
 					wsMgr.BroadcastInstanceStatus(inst.ID, "error")
+					if errMsg != "" {
+						wsMgr.BroadcastInstanceError(inst.ID, errMsg)
+					}
 					m.saveInstances()
 				}
 			}
 		}
 		m.mu.Unlock()
 	}
+}
+
+// extractErrorMessage 从日志中提取错误信息
+func extractErrorMessage(logContent string) string {
+	if logContent == "" {
+		return ""
+	}
+	lines := strings.Split(logContent, "\n")
+	// 从后往前找错误
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := lines[i]
+		lower := strings.ToLower(line)
+		if strings.Contains(lower, "error") || strings.Contains(lower, "failed") || strings.Contains(lower, "panic") {
+			return line
+		}
+	}
+	// 如果没找到错误，返回最后一行
+	if len(lines) > 0 && lines[len(lines)-1] != "" {
+		return lines[len(lines)-1]
+	}
+	return ""
 }

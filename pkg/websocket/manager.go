@@ -86,6 +86,16 @@ func (m *Manager) BroadcastInstanceStatus(instanceID, status string) {
 	})
 }
 
+func (m *Manager) BroadcastInstanceError(instanceID, errorMsg string) {
+	m.Broadcast(Message{
+		Type: "instance_error",
+		Payload: map[string]string{
+			"id":      instanceID,
+			"message": errorMsg,
+		},
+	})
+}
+
 func (m *Manager) BroadcastLog(instanceID, logLine string) {
 	m.Broadcast(Message{
 		Type: "log",

@@ -20,6 +20,23 @@ func (m *Manager) Close() {
 	// 清理资源
 }
 
+// GetRecentLogs 获取最近的日志行
+func (m *Manager) GetRecentLogs(instanceID string, lines int) string {
+	logFile := filepath.Join(m.logDir, instanceID+".log")
+	data, err := os.ReadFile(logFile)
+	if err != nil {
+		return ""
+	}
+
+	allLines := strings.Split(string(data), "\n")
+	if len(allLines) <= lines {
+		return strings.Join(allLines, "\n")
+	}
+
+	// 返回最后N行
+	return strings.Join(allLines[len(allLines)-lines:], "\n")
+}
+
 func (m *Manager) HandleGet() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		instanceID := r.URL.Query().Get("instance")
