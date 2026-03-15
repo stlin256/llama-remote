@@ -101,6 +101,7 @@ func main() {
 	r.HandleFunc("/api/logout", authMgr.HandleLogout()).Methods("POST")
 	r.HandleFunc("/api/check", authMgr.HandleCheck()).Methods("GET")
 	r.HandleFunc("/api/server/log", logManager.HandleServerLog()).Methods("GET")
+	r.HandleFunc("/api/logs", logManager.HandleGet()).Methods("GET")
 
 	// 受保护的API路由
 	api := r.PathPrefix("/api").Subrouter()
@@ -143,8 +144,6 @@ func main() {
 	api.HandleFunc("/system", sysMonitor.HandleGet()).Methods("GET")
 
 	// 日志API
-	api.HandleFunc("/logs", logManager.HandleGet()).Methods("GET")
-	api.HandleFunc("/logs/stream", logManager.HandleStream(wsMgr)).Methods("GET")
 
 	// WebSocket
 	r.HandleFunc("/ws", wsMgr.Handle)

@@ -324,10 +324,19 @@ func (m *Manager) StopAll() {
 	defer m.mu.RUnlock()
 
 	for _, inst := range m.instances {
-		if inst.Status == "running" {
-			m.stopInstance(inst)
+		if inst.Status == "running" || inst.Status == "loading" || inst.PID > 0 {
+			// Force kill the process
+			if inst.PID > 0 {
+				proc, err := os.FindProcess(inst.PID)
+				if err == nil {
+					proc.Kill()
+				}
+			}
+			inst.Status = "stopped"
+			inst.PID = 0
 		}
 	}
+	m.saveInstances()
 }
 
 func (m *Manager) WatchStatus(wsMgr *websocket.Manager, logMgr *logs.Manager) {

@@ -95,6 +95,9 @@ export const api = {
 
   // Server logs (debug)
   getServerLogs: (lines: number = 100) => request<any>(`/api/server/log?lines=${lines}`),
+
+  // Instance logs
+  getInstanceLogs: (instanceId?: string) => request<any>(`/api/logs?instance=${instanceId || ''}`),
 }
 
 // WebSocket连接

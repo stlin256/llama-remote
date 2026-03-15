@@ -13,11 +13,11 @@ export default function Logs() {
 
   const loadServerLogs = async () => {
     try {
-      const data = await api.getServerLogs(100)
+      const data = await api.getInstanceLogs()
       setServerLogs(data.logs || [])
       setShowServerLogs(true)
     } catch (e) {
-      console.error('Failed to load server logs:', e)
+      console.error('Failed to load logs:', e)
     }
   }
 
@@ -48,7 +48,7 @@ export default function Logs() {
         <div className="flex gap-2">
           <button onClick={loadServerLogs} className="btn">
             <Terminal size={12} style={{ marginRight: 4 }} />
-            服务器日志
+            实例日志
           </button>
           <button onClick={clearLogs} className="btn">
             <Trash2 size={12} style={{ marginRight: 4 }} />
@@ -88,7 +88,7 @@ export default function Logs() {
       {showServerLogs ? (
         <div className="panel" style={{ flex: 1, overflow: 'auto', padding: 8 }}>
           <div className="flex items-center justify-between mb-2">
-            <span style={{ fontWeight: 'bold' }}>服务器日志</span>
+            <span style={{ fontWeight: 'bold' }}>实例日志</span>
             <button onClick={() => setShowServerLogs(false)} className="btn" style={{ padding: '2px 8px' }}>关闭</button>
           </div>
           <pre style={{ fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
