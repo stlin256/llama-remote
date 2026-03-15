@@ -37,8 +37,8 @@ function ConfirmDialog({ show, title, message, onConfirm, onCancel }: ConfirmDia
             <span style={{ flex: 1 }}>{message}</span>
           </div>
           <div className="flex justify-end gap-2">
-            <button onClick={onCancel} className="btn" style={{ minWidth: 60 }}>否</button>
-            <button onClick={onConfirm} className="btn btn-primary" style={{ minWidth: 60 }}>是</button>
+            <button onClick={onCancel} className="btn" style={{ minWidth: 60 }}>{localStorage.getItem('language') === 'en' ? 'No' : '否'}</button>
+            <button onClick={onConfirm} className="btn btn-primary" style={{ minWidth: 60 }}>{localStorage.getItem('language') === 'en' ? 'Yes' : '是'}</button>
           </div>
         </div>
       </div>
@@ -66,9 +66,13 @@ export function confirm(message: string, title?: string): Promise<boolean> {
 }
 
 // Hook to use confirm dialog
+function getDefaultTitle(): string {
+  return localStorage.getItem('language') === 'en' ? 'Confirm' : '确认'
+}
+
 export function useConfirm() {
   const [show, setShow] = useState(false)
-  const [data, setData] = useState({ title: '确认', message: '' })
+  const [data, setData] = useState({ title: getDefaultTitle(), message: '' })
 
   useEffect(() => {
     const handler = (e: CustomEvent) => {

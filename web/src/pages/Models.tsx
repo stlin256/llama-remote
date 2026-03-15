@@ -46,14 +46,14 @@ export default function Models() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>模型库</h2>
+          <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>{t('modelLibrary')}</h2>
           <p className="text-sm" style={{ color: 'var(--win-gray-dark)', marginTop: 4 }}>
             {t('directory')}: {config?.paths.models_dir || t('notSet')}
           </p>
         </div>
         <button onClick={scanModels} disabled={loading} className="btn">
           <RefreshCw size={12} style={{ marginRight: 4, animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-          重新扫描
+          {t('rescan')}
         </button>
       </div>
 
@@ -80,10 +80,10 @@ export default function Models() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
             <thead>
               <tr style={{ background: 'var(--win-gray)', textAlign: 'left' }}>
-                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>模型名称</th>
-                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>大小</th>
-                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>修改时间</th>
-                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>MMProj</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('modelName')}</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('size')}</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('modifiedTime')}</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('mmproj')}</th>
               </tr>
             </thead>
             <tbody>

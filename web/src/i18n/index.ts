@@ -118,6 +118,11 @@ export const zh = {
   searchLogs: '搜索日志...',
   allLevels: '全部级别',
   noLogs: '暂无日志',
+  close: '关闭',
+  modelConfigured: '已配置',
+
+  // Delete confirmation
+  confirmDeletePrompt: '删除提示词模板 "{name}"?',
 
   // Settings
   settingsTitle: '设置',
@@ -149,6 +154,7 @@ export const zh = {
   confirm: '确定',
   yes: '是',
   no: '否',
+  ok: '确定',
   success: '成功',
   failed: '失败',
   error: '错误',
@@ -271,6 +277,11 @@ export const en = {
   searchLogs: 'Search logs...',
   allLevels: 'All Levels',
   noLogs: 'No logs',
+  close: 'Close',
+  modelConfigured: 'Configured',
+
+  // Delete confirmation
+  confirmDeletePrompt: 'Delete prompt template "{name}"?',
 
   // Settings
   settingsTitle: 'Settings',
@@ -302,6 +313,7 @@ export const en = {
   confirm: 'Confirm',
   yes: 'Yes',
   no: 'No',
+  ok: 'OK',
   success: 'Success',
   failed: 'Failed',
   error: 'Error',

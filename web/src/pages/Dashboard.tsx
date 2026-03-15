@@ -61,9 +61,9 @@ export default function Dashboard() {
           <div className="panel">
             <h3 style={{ fontWeight: 'bold', marginBottom: 8 }}>{t('systemStatus')}</h3>
             <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, fontSize: 11 }}>
-              <div>CPU: {systemStats.cpu.toFixed(0)}%</div>
-              <div>内存: {systemStats.mem_used.toFixed(0)} / {systemStats.mem_total.toFixed(0)} GB</div>
-              <div>内存使用率: {systemStats.mem_percent.toFixed(0)}%</div>
+              <div>{t('cpu')}: {systemStats.cpu.toFixed(0)}%</div>
+              <div>{t('memory')}: {systemStats.mem_used.toFixed(0)} / {systemStats.mem_total.toFixed(0)} GB</div>
+              <div>{t('memoryUsage')}: {systemStats.mem_percent.toFixed(0)}%</div>
             </div>
           </div>
         )}
@@ -74,11 +74,11 @@ export default function Dashboard() {
             <h3 style={{ fontWeight: 'bold', marginBottom: 8 }}>{t('gpuStatus')}</h3>
             <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, fontSize: 11 }}>
               <div>{gpuName}</div>
-              <div>利用率: {gpuStats.utilization.toFixed(0)}%</div>
+              <div>{t('gpuUtilization')}: {gpuStats.utilization.toFixed(0)}%</div>
               <div>{t('vram')}: {gpuStats.memory_used.toFixed(1)} / {gpuStats.memory_total.toFixed(0)} GB</div>
-              <div>温度: {gpuStats.temperature}°C</div>
-              <div>功率: {gpuStats.power.toFixed(0)}W</div>
-              <div>负载: {gpuStats.memory_load}</div>
+              <div>{t('gpuTemperature')}: {gpuStats.temperature}°C</div>
+              <div>{t('gpuPower')}: {gpuStats.power.toFixed(0)}W</div>
+              <div>{t('gpuLoad')}: {gpuStats.memory_load}</div>
             </div>
           </div>
         )}

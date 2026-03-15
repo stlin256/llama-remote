@@ -186,7 +186,7 @@ export default function Instances() {
       }
       setShowModal(false)
     } catch (e) {
-      await error(`操作失败: ${e}`)
+      await error(`${t('operationFailed')}: ${e}`)
     }
   }
 
@@ -196,7 +196,7 @@ export default function Instances() {
       await api.deleteInstance(id)
       removeInstance(id)
     } catch (e) {
-      await error(`删除失败: ${e}`)
+      await error(`${t('deleteFailed')}: ${e}`)
     }
   }
 
@@ -207,7 +207,7 @@ export default function Instances() {
       updateInstance(id, { status: 'running' })
     } catch (e) {
       updateInstance(id, { status: 'error' })
-      await error(`启动失败: ${e}`)
+      await error(`${t('startFailed')}: ${e}`)
     }
   }
 
@@ -216,17 +216,17 @@ export default function Instances() {
       await api.stopInstance(id)
       updateInstance(id, { status: 'stopped' })
     } catch (e) {
-      await error(`停止失败: ${e}`)
+      await error(`${t('stopFailed')}: ${e}`)
     }
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>实例管理</h2>
+        <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>{t('instanceManagement')}</h2>
         <button onClick={openCreateModal} className="btn">
           <Plus size={12} style={{ marginRight: 4 }} />
-          新建实例
+          {t('createInstance')}
         </button>
       </div>
 
@@ -234,10 +234,10 @@ export default function Instances() {
         <div className="panel" style={{ padding: 32, textAlign: 'center' }}>
           <div className="flex items-center justify-center" style={{ marginBottom: 8 }}>
             <Server size={32} style={{ opacity: 0.5 }} />
-            <span style={{ marginLeft: 8 }}>暂无实例</span>
+            <span style={{ marginLeft: 8 }}>{t('noInstancesYet')}</span>
           </div>
           <button onClick={openCreateModal} className="btn" style={{ marginTop: 8 }}>
-            创建第一个实例
+            {t('createFirstInstance')}
           </button>
         </div>
       ) : (
@@ -245,14 +245,14 @@ export default function Instances() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
             <thead>
               <tr style={{ background: 'var(--win-gray)', textAlign: 'left' }}>
-                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>名称</th>
-                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>模型</th>
-                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>端口</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('name')}</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('model')}</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('port')}</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>GPU</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>Ctx</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>MM</th>
-                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>状态</th>
-                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)', width: 120 }}>操作</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('status')}</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)', width: 120 }}>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -306,7 +306,7 @@ export default function Instances() {
       <Modal title={editingInstance ? t('editInstance') : t('createInstance')} show={showModal} onClose={() => setShowModal(false)} width={500}>
         <div className="flex flex-col gap-4">
           <div>
-            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>实例名称 *</label>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('instanceName')} *</label>
             <input
               type="text"
               className="input"
@@ -318,14 +318,14 @@ export default function Instances() {
           </div>
 
           <div>
-            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>模型文件 *</label>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('modelFile')} *</label>
             <select
               className="input"
               style={{ width: '100%' }}
               value={formData.model || ''}
               onChange={e => handleModelChange(e.target.value)}
             >
-              <option value="">选择模型...</option>
+              <option value="">{t('selectModel')}</option>
               {models.map(m => (
                 <option key={m.path} value={m.path}>{m.name} ({formatSize(m.size)})</option>
               ))}
@@ -335,28 +335,28 @@ export default function Instances() {
           {/* Model Info */}
           {selectedModel && (
             <div className="panel" style={{ padding: 8 }}>
-              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>模型信息</div>
+              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{t('modelInfo')}</div>
               <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, fontSize: 10 }}>
-                <div>大小: {formatSize(selectedModel.size)}</div>
-                <div>路径: {selectedModel.path}</div>
-                {selectedModel.mmproj && <div>MMProj: 已配置</div>}
+                <div>{t('size')}: {formatSize(selectedModel.size)}</div>
+                <div>{t('path')}: {selectedModel.path}</div>
+                {selectedModel.mmproj && <div>{t('mmproj')}: {t('modelConfigured')}</div>}
               </div>
             </div>
           )}
 
           <div>
-            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>MMProj (可选)</label>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('mmprojOptional')}</label>
             <select
               className="input"
               style={{ width: '100%' }}
               value={formData.mmproj || ''}
               onChange={e => setFormData({ ...formData, mmproj: e.target.value })}
             >
-              <option value="">无</option>
+              <option value="">{t('noMmproj')}</option>
               {models.flatMap(m => {
                 // 显示所有模型，如果有mmproj则显示
                 return [
-                  <option key={m.name + '-none'} value="">无 - {m.name}</option>,
+                  <option key={m.name + '-none'} value="">{t('noMmproj')} - {m.name}</option>,
                   ...(m.mmproj ? m.mmproj.split(',').map((mp: string) => (
                     <option key={mp} value={mp}>{m.name} - {mp.split('/').pop()}</option>
                   )) : [])
@@ -366,32 +366,32 @@ export default function Instances() {
           </div>
 
           <div>
-            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>提示词模板 (可选)</label>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('promptTemplateOptional')}</label>
             <select
               className="input"
               style={{ width: '100%' }}
               value={formData.prompt_template || ''}
               onChange={e => setFormData({ ...formData, prompt_template: e.target.value })}
             >
-              <option value="">无</option>
-              <option value={DEFAULT_PROMPT_TEMPLATE}>默认提示词 (强推理模型)</option>
+              <option value="">{t('noPromptTemplate')}</option>
+              <option value={DEFAULT_PROMPT_TEMPLATE}>{t('defaultPromptTemplate')}</option>
               {prompts.map((p) => (
                 <option key={p.name} value={p.content}>{p.name}</option>
               ))}
             </select>
             {formData.prompt_template && (
               <div className="panel" style={{ marginTop: 8, padding: 8, maxHeight: 120, overflow: 'auto', fontSize: 10 }}>
-                <div style={{ fontWeight: 'bold', marginBottom: 4 }}>模板预览:</div>
+                <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{t('templatePreview')}:</div>
                 <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{formData.prompt_template.slice(0, 500)}{formData.prompt_template.length > 500 ? '...' : ''}</pre>
               </div>
             )}
           </div>
 
           <div className="panel" style={{ marginTop: 8 }}>
-            <h4 style={{ fontWeight: 'bold', marginBottom: 8 }}>启动参数</h4>
+            <h4 style={{ fontWeight: 'bold', marginBottom: 8 }}>{t('startupParams')}</h4>
             <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
               <div>
-                <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>GPU层</label>
+                <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>{t('gpuLayers')}</label>
                 <input
                   type="number"
                   className="input"
@@ -404,7 +404,7 @@ export default function Instances() {
                 />
               </div>
               <div>
-                <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>上下文</label>
+                <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>{t('context')}</label>
                 <input
                   type="number"
                   className="input"
@@ -417,7 +417,7 @@ export default function Instances() {
                 />
               </div>
               <div>
-                <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>端口</label>
+                <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>{t('port')}</label>
                 <input
                   type="number"
                   className="input"
@@ -430,7 +430,7 @@ export default function Instances() {
                 />
               </div>
               <div>
-                <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>线程</label>
+                <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>{t('threads')}</label>
                 <input
                   type="number"
                   className="input"
@@ -482,8 +482,8 @@ export default function Instances() {
           </div>
         </div>
         <div className="flex gap-2 justify-end mt-4">
-          <button onClick={() => setShowModal(false)} className="btn">取消</button>
-          <button onClick={validateAndSubmit} className="btn btn-primary">保存</button>
+          <button onClick={() => setShowModal(false)} className="btn">{t('cancel')}</button>
+          <button onClick={validateAndSubmit} className="btn btn-primary">{t('save')}</button>
         </div>
       </Modal>
     </div>

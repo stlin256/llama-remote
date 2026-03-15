@@ -42,7 +42,7 @@ function MessageDialog({ show, title, message, type, onClose }: MessageDialogPro
             <span style={{ flex: 1, wordBreak: 'break-word' }}>{message}</span>
           </div>
           <div className="flex justify-end">
-            <button onClick={onClose} className="btn btn-primary" style={{ minWidth: 60 }}>确定</button>
+            <button onClick={onClose} className="btn btn-primary" style={{ minWidth: 60 }}>{localStorage.getItem('language') === 'en' ? 'OK' : '确定'}</button>
           </div>
         </div>
       </div>
@@ -86,9 +86,13 @@ export function info(msg: string, title?: string) {
 }
 
 // Hook to use message dialog
+function getDefaultTitle(): string {
+  return localStorage.getItem('language') === 'en' ? 'Info' : '提示'
+}
+
 export function useMessage() {
   const [show, setShow] = useState(false)
-  const [data, setData] = useState({ title: '提示', message: '', type: 'info' as MessageType })
+  const [data, setData] = useState({ title: getDefaultTitle(), message: '', type: 'info' as MessageType })
 
   useEffect(() => {
     const handler = (e: CustomEvent) => {

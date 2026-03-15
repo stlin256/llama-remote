@@ -79,7 +79,7 @@ export default function Login() {
               </div>
 
               <div>
-                <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>密码:</label>
+                <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('password')}:</label>
                 <input
                   type="password"
                   className="input"

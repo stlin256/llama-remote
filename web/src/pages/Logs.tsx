@@ -61,7 +61,7 @@ export default function Logs() {
   return (
     <div className="flex flex-col gap-4" style={{ height: '100%' }}>
       <div className="flex items-center justify-between">
-        <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>日志</h2>
+        <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>{t('log')}</h2>
         <div className="flex gap-2 items-center">
           <select
             className="input"
@@ -69,18 +69,18 @@ export default function Logs() {
             value={selectedInstance}
             onChange={e => setSelectedInstance(e.target.value)}
           >
-            <option value="">选择实例...</option>
+            <option value="">{t('selectInstance')}</option>
             {instances.map(inst => (
               <option key={inst.id} value={inst.id}>{inst.name}</option>
             ))}
           </select>
           <button onClick={() => selectedInstance && loadServerLogs(selectedInstance)} className="btn" disabled={!selectedInstance}>
             <Terminal size={12} style={{ marginRight: 4 }} />
-            查看日志
+            {t('viewLogs')}
           </button>
           <button onClick={clearLogs} className="btn">
             <Trash2 size={12} style={{ marginRight: 4 }} />
-            清空
+            {t('clearLogs')}
           </button>
         </div>
       </div>
@@ -104,7 +104,7 @@ export default function Logs() {
           value={levelFilter}
           onChange={e => setLevelFilter(e.target.value)}
         >
-          <option value="all">全部级别</option>
+          <option value="all">{t('allLevels')}</option>
           <option value="error">Error</option>
           <option value="warn">Warning</option>
           <option value="info">Info</option>
@@ -117,7 +117,7 @@ export default function Logs() {
         <div className="panel" style={{ flex: 1, overflow: 'auto', padding: 8 }}>
           <div className="flex items-center justify-between mb-2">
             <span style={{ fontWeight: 'bold' }}>{instances.find(i => i.id === selectedInstance)?.name || t('instances')} {t('logs')}</span>
-            <button onClick={() => setShowServerLogs(false)} className="btn" style={{ padding: '2px 8px' }}>关闭</button>
+            <button onClick={() => setShowServerLogs(false)} className="btn" style={{ padding: '2px 8px' }}>{t('close')}</button>
           </div>
           <pre style={{ fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
             {serverLogs.join('\n')}
@@ -133,7 +133,7 @@ export default function Logs() {
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--win-gray-dark)' }}>
                 <div className="flex items-center">
                   <ScrollText size={32} style={{ opacity: 0.5 }} />
-                  <span style={{ marginLeft: 8 }}>暂无日志</span>
+                  <span style={{ marginLeft: 8 }}>{t('noLogs')}</span>
                 </div>
               </div>
             ) : (

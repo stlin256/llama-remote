@@ -88,12 +88,12 @@ export default function Templates() {
       setPromptForm({ name: '', content: '' })
       await success(t('promptSaved'))
     } catch (e) {
-      await error(`保存失败: ${e}`)
+      await error(`${t('saveFailed')}: ${e}`)
     }
   }
 
   const handleDeletePrompt = async (name: string) => {
-    if (!await confirm(`删除提示词模板 "${name}"?`)) return
+    if (!await confirm(t('confirmDeletePrompt').replace('{name}', name))) return
     try {
       await api.deletePrompt(name)
       const result = await api.getPrompts()
@@ -105,7 +105,7 @@ export default function Templates() {
       }
       await success(t('promptDeleted'))
     } catch (e) {
-      await error(`删除失败: ${e}`)
+      await error(`${t('deleteFailed')}: ${e}`)
     }
   }
 
@@ -116,18 +116,18 @@ export default function Templates() {
       setPrompts([])
       await success(t('promptsCleared'))
     } catch (e) {
-      await error(`清除失败: ${e}`)
+      await error(`${t('clearFailed')}: ${e}`)
     }
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>模板管理</h2>
+        <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>{t('templateManagement')}</h2>
         <div className="flex gap-2">
           {promptList.length > 0 && (
             <button onClick={handleClearAll} className="btn" style={{ background: '#c0c0c0' }}>
-              清空所有
+              {t('clearAll')}
             </button>
           )}
           <button
@@ -138,7 +138,7 @@ export default function Templates() {
             className="btn"
           >
             <Plus size={12} style={{ marginRight: 4 }} />
-            新建模板
+            {t('createTemplate')}
           </button>
         </div>
       </div>
@@ -153,7 +153,7 @@ export default function Templates() {
               <Lock size={12} style={{ color: 'var(--win-gray-dark)' }} />
               <span style={{ fontWeight: 'bold' }}>{DEFAULT_PROMPT_TEMPLATE.name}</span>
             </div>
-            <span style={{ fontSize: 10, color: 'var(--win-gray-dark)' }}>内置模板，不可删除</span>
+            <span style={{ fontSize: 10, color: 'var(--win-gray-dark)' }}>{t('builtInTemplate')}</span>
           </div>
           <div
             className="panel"
@@ -166,7 +166,7 @@ export default function Templates() {
               fontFamily: 'monospace',
             }}
           >
-            <div style={{ fontWeight: 'bold', marginBottom: 4 }}>模板预览:</div>
+            <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{t('templatePreview')}:</div>
             <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
               {DEFAULT_PROMPT_TEMPLATE.content.slice(0, 500)}{DEFAULT_PROMPT_TEMPLATE.content.length > 500 ? '...' : ''}
             </pre>
@@ -178,7 +178,7 @@ export default function Templates() {
           <div className="panel" style={{ padding: 32, textAlign: 'center' }}>
             <div className="flex items-center justify-center" style={{ marginBottom: 8 }}>
               <FileText size={32} style={{ opacity: 0.5 }} />
-              <span style={{ marginLeft: 8 }}>暂无自定义提示词模板</span>
+              <span style={{ marginLeft: 8 }}>{t('noCustomTemplates')}</span>
             </div>
           </div>
         ) : (
@@ -206,7 +206,7 @@ export default function Templates() {
                     fontFamily: 'monospace',
                   }}
                 >
-                  <div style={{ fontWeight: 'bold', marginBottom: 4 }}>模板预览:</div>
+                  <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{t('templatePreview')}:</div>
                   <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
                     {p.content.slice(0, 500)}{p.content.length > 500 ? '...' : ''}
                   </pre>
@@ -221,7 +221,7 @@ export default function Templates() {
       <Modal title={t('createTemplate')} show={showPromptModal} onClose={() => setShowPromptModal(false)} width={500}>
         <div className="flex flex-col gap-4">
           <div>
-            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>模板名称</label>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('templateName')}</label>
             <input
               type="text"
               className="input"
@@ -232,7 +232,7 @@ export default function Templates() {
             />
           </div>
           <div>
-            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>提示词内容</label>
+            <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('templateContent')}</label>
             <textarea
               className="input"
               style={{ width: '100%', minHeight: 150, fontFamily: 'monospace', fontSize: 10 }}
@@ -243,8 +243,8 @@ export default function Templates() {
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-4">
-          <button onClick={() => setShowPromptModal(false)} className="btn">取消</button>
-          <button onClick={handleSavePrompt} className="btn btn-primary">保存</button>
+          <button onClick={() => setShowPromptModal(false)} className="btn">{t('cancel')}</button>
+          <button onClick={handleSavePrompt} className="btn btn-primary">{t('save')}</button>
         </div>
       </Modal>
     </div>
