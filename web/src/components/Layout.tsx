@@ -62,6 +62,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         setSystemStats(data.payload)
       } else if (data.type === 'instance_status') {
         // 更新实例状态
+        console.log('Received instance_status:', data.payload)
         const { id, status } = data.payload
         updateInstanceStatus(id, status)
       } else if (data.type === 'instance_error') {

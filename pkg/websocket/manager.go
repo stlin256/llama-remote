@@ -77,6 +77,7 @@ func (m *Manager) BroadcastStats(stats gpu.Stats) {
 }
 
 func (m *Manager) BroadcastInstanceStatus(instanceID, status string) {
+	log.Printf("BroadcastInstanceStatus: id=%s, status=%s", instanceID, status)
 	m.Broadcast(Message{
 		Type: "instance_status",
 		Payload: map[string]string{
