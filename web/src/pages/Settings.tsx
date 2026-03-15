@@ -198,7 +198,7 @@ export default function Settings() {
           {saving ? t('loading') : t('saveSettings')}
         </button>
         {message && (
-          <span style={{ color: message.includes('失败') ? '#aa0000' : '#00aa00' }}>
+          <span style={{ color: message.toLowerCase().includes('failed') || message.includes('失败') ? '#aa0000' : '#00aa00' }}>
             {message}
           </span>
         )}

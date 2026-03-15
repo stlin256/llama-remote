@@ -9,7 +9,7 @@ import { useTranslation } from '../i18n/useTranslation'
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [time, setTime] = useState(new Date())
   const navigate = useNavigate()
-  const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, setSystemStats, setAuthenticated, instances, updateInstanceStatus, language } = useStore()
+  const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, setSystemStats, setAuthenticated, instances, updateInstanceStatus } = useStore()
   const { t } = useTranslation()
 
   const navItems = [
@@ -22,7 +22,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   ]
 
   const handleLogout = async () => {
-    if (await confirm(language === 'zh' ? '确定要退出登录吗？' : 'Logout?')) {
+    if (await confirm(t('confirmLogout'))) {
       await api.logout()
       setAuthenticated(false)
       navigate('/')
@@ -30,7 +30,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   const handleStopAll = async () => {
-    if (await confirm(language === 'zh' ? '确定要停止所有运行中的实例吗？' : 'Stop all running instances?')) {
+    if (await confirm(t('confirmStopAll'))) {
       await api.stopAllInstances()
       // 刷新实例列表
       const data = await api.getInstances()
@@ -80,7 +80,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         const { id, message: errMsg } = data.payload
         const instance = instances.find(i => i.id === id)
         const name = instance?.name || id
-        error(language === 'zh' ? `实例 "${name}" 错误: ${errMsg}` : `Instance "${name}" error: ${errMsg}`)
+        error(t('instanceError').replace('{name}', name).replace('{error}', errMsg))
       }
     })
 
@@ -193,7 +193,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         left: 0,
         right: 0,
       }}>
-        <span>{language === 'zh' ? '就绪' : 'Ready'}</span>
+        <span>{t('ready')}</span>
         <span>{runningCount} {t('running')}</span>
         <span style={{ marginLeft: 'auto' }}>
           {time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}

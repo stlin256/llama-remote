@@ -1,14 +1,14 @@
 import { useStore } from '../store'
-import { zh, en, TranslationKey } from './index'
+import { zh, en } from './index'
 
-const translations = { zh, en }
+const translations: Record<string, Record<string, string>> = { zh, en }
 
 export function useTranslation() {
   const language = useStore((state) => (state as any).language || 'zh')
   const setLanguage = useStore((state) => (state as any).setLanguage)
 
-  const t = (key: TranslationKey): string => {
-    return translations[language as keyof typeof translations]?.[key] || translations.zh[key] || key
+  const t = (key: string): string => {
+    return translations[language]?.[key] || translations.zh[key] || key
   }
 
   return { t, language, setLanguage }

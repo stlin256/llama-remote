@@ -57,7 +57,7 @@ Reasoning: high`
 
 export default function Templates() {
   const { prompts, setPrompts } = useStore()
-  const { t, language } = useTranslation()
+  const { t } = useTranslation()
   const [showPromptModal, setShowPromptModal] = useState(false)
   const [promptForm, setPromptForm] = useState<Partial<PromptTemplate>>({
     name: '',
@@ -228,7 +228,7 @@ export default function Templates() {
               style={{ width: '100%' }}
               value={promptForm.name || ''}
               onChange={e => setPromptForm({ ...promptForm, name: e.target.value })}
-              placeholder={language === 'zh' ? '代码助手' : t('templatePlaceholder')}
+              placeholder={t('templatePlaceholder')}
             />
           </div>
           <div>
@@ -238,7 +238,7 @@ export default function Templates() {
               style={{ width: '100%', minHeight: 150, fontFamily: 'monospace', fontSize: 10 }}
               value={promptForm.content || ''}
               onChange={e => setPromptForm({ ...promptForm, content: e.target.value })}
-              placeholder={language === 'zh' ? '你是一个专业的编程助手...' : t('promptContentPlaceholder')}
+              placeholder={t('promptContentPlaceholder')}
             />
           </div>
         </div>

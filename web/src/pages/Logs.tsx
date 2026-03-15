@@ -6,7 +6,7 @@ import { useTranslation } from '../i18n/useTranslation'
 
 export default function Logs() {
   const { logs, clearLogs, instances } = useStore()
-  const { t, language } = useTranslation()
+  const { t } = useTranslation()
   const [filter, setFilter] = useState('')
   const [levelFilter, setLevelFilter] = useState<string>('all')
   const [serverLogs, setServerLogs] = useState<string[]>([])
@@ -116,7 +116,7 @@ export default function Logs() {
       {showServerLogs ? (
         <div className="panel" style={{ flex: 1, overflow: 'auto', padding: 8 }}>
           <div className="flex items-center justify-between mb-2">
-            <span style={{ fontWeight: 'bold' }}>{instances.find(i => i.id === selectedInstance)?.name || (language === 'zh' ? '实例' : 'Instance')} {language === 'zh' ? '日志' : 'Logs'}</span>
+            <span style={{ fontWeight: 'bold' }}>{instances.find(i => i.id === selectedInstance)?.name || t('instances')} {t('logs')}</span>
             <button onClick={() => setShowServerLogs(false)} className="btn" style={{ padding: '2px 8px' }}>关闭</button>
           </div>
           <pre style={{ fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>

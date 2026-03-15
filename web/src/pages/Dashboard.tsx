@@ -13,7 +13,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>{language === 'zh' ? '系统概览' : 'System Overview'}</h2>
+      <h2 style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>{t('systemOverview')}</h2>
 
       {/* Stats */}
       <div className="grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
@@ -48,7 +48,7 @@ export default function Dashboard() {
         <div className="panel" style={{ padding: 8 }}>
           <div className="flex items-center gap-2 mb-2">
             <Zap size={16} />
-            <span className="text-sm">{language === 'zh' ? '显存' : 'VRAM'}</span>
+            <span className="text-sm">{t('vram')}</span>
           </div>
           <div style={{ fontSize: 24, fontWeight: 'bold' }}>{gpuStats ? `${gpuStats.memory_used.toFixed(1)}GB` : 'N/A'}</div>
         </div>
@@ -75,7 +75,7 @@ export default function Dashboard() {
             <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, fontSize: 11 }}>
               <div>{gpuName}</div>
               <div>利用率: {gpuStats.utilization.toFixed(0)}%</div>
-              <div>{language === 'zh' ? '显存' : 'VRAM'}: {gpuStats.memory_used.toFixed(1)} / {gpuStats.memory_total.toFixed(0)} GB</div>
+              <div>{t('vram')}: {gpuStats.memory_used.toFixed(1)} / {gpuStats.memory_total.toFixed(0)} GB</div>
               <div>温度: {gpuStats.temperature}°C</div>
               <div>功率: {gpuStats.power.toFixed(0)}W</div>
               <div>负载: {gpuStats.memory_load}</div>
@@ -89,13 +89,13 @@ export default function Dashboard() {
         <h3 style={{ fontWeight: 'bold', marginBottom: 8 }}>{t('status')}</h3>
         {instances.length === 0 ? (
           <div style={{ padding: 16, textAlign: 'center', color: 'var(--win-gray-dark)' }}>
-            {language === 'zh' ? '暂无实例' : 'No instances'}
+            {t('noInstances')}
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
             <thead>
               <tr style={{ background: 'var(--win-gray)', textAlign: 'left' }}>
-                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{language === 'zh' ? '名称' : 'Name'}</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('name')}</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{language === 'zh' ? '模型' : 'Model'}</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('port')}</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('status')}</th>

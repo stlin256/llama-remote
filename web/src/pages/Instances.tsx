@@ -61,7 +61,7 @@ Before taking any action (either tool calls *or* responses to the user), you mus
 Reasoning: high`
 
 export default function Instances() {
-  const { instances, models, prompts, addInstance, updateInstance, removeInstance, language } = useStore()
+  const { instances, models, prompts, addInstance, updateInstance, removeInstance } = useStore()
   const { t } = useTranslation()
   const [showModal, setShowModal] = useState(false)
   const [editingInstance, setEditingInstance] = useState<Instance | null>(null)
@@ -167,7 +167,7 @@ export default function Instances() {
         updateInstance(editingInstance.id, finalData)
         // If instance was running, ask to restart
         if (editingInstance.status === 'running') {
-          if (await confirm(language === 'zh' ? '实例正在运行，修改已保存。是否重新启动以应用更改？' : t('instanceRunningRestart'))) {
+          if (await confirm(t('instanceRunningRestart'))) {
             await api.stopInstance(editingInstance.id)
             await api.startInstance(editingInstance.id)
             updateInstance(editingInstance.id, { status: 'starting' })
@@ -178,7 +178,7 @@ export default function Instances() {
         addInstance(created)
         setShowModal(false)
         // Ask to start the new instance
-        if (await confirm(language === 'zh' ? '实例创建成功，是否立即启动？' : t('instanceCreatedStart'))) {
+        if (await confirm(t('instanceCreatedStart'))) {
           await api.startInstance(created.id)
           updateInstance(created.id, { status: 'starting' })
         }
@@ -191,7 +191,7 @@ export default function Instances() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!await confirm(language === 'zh' ? '确定要删除这个实例吗?' : t('confirmDeleteInstance'))) return
+    if (!await confirm(t('confirmDeleteInstance'))) return
     try {
       await api.deleteInstance(id)
       removeInstance(id)
@@ -313,7 +313,7 @@ export default function Instances() {
               style={{ width: '100%' }}
               value={formData.name || ''}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
-              placeholder={language === 'zh' ? '必填' : 'Required'}
+              placeholder={t('required')}
             />
           </div>
 

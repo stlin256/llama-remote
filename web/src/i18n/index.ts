@@ -11,10 +11,23 @@ export const zh = {
   settings: '设置',
 
   // Dashboard
-  gpuStatus: 'GPU 状态',
-  systemStatus: '系统状态',
+  systemOverview: '系统概览',
+  vram: '显存',
+  name: '名称',
+  model: '模型',
+  noInstances: '暂无实例',
   cpu: 'CPU',
   memory: '内存',
+  gpuStatus: 'GPU 状态',
+  systemStatus: '系统状态',
+
+  // Layout
+  ready: '就绪',
+  confirmLogout: '确定要退出登录吗？',
+  confirmStopAll: '确定要停止所有运行中的实例吗？',
+  instanceError: '实例 "{name}" 错误: {error}',
+
+  // Instances
   used: '已用',
   total: '总计',
   utilization: '利用率',
@@ -56,6 +69,7 @@ export const zh = {
   instanceCreatedStart: '实例创建成功，是否立即启动？',
   confirmDeleteInstance: '确定要删除这个实例吗?',
   auto: '自动',
+  required: '必填',
 
   // Status
   status: '状态',
@@ -154,10 +168,19 @@ export const en = {
   settings: 'Settings',
 
   // Dashboard
-  gpuStatus: 'GPU Status',
-  systemStatus: 'System Status',
-  cpu: 'CPU',
-  memory: 'Memory',
+  systemOverview: 'System Overview',
+  vram: 'VRAM',
+  name: 'Name',
+  model: 'Model',
+  noInstances: 'No instances',
+
+  // Layout
+  ready: 'Ready',
+  confirmLogout: 'Logout?',
+  confirmStopAll: 'Stop all running instances?',
+  instanceError: 'Instance "{name}" error: {error}',
+
+  // Instances
   used: 'Used',
   total: 'Total',
   utilization: 'Utilization',
@@ -199,6 +222,7 @@ export const en = {
   instanceCreatedStart: 'Instance created. Start now?',
   confirmDeleteInstance: 'Delete this instance?',
   auto: 'Auto',
+  required: 'Required',
 
   // Status
   status: 'Status',
