@@ -350,7 +350,8 @@ export default function Instances() {
                 return mmprojs.length > 0
               }).flatMap(m => {
                 // 拆分多个mmproj，每个都作为选项
-                return m.mmproj.split(',').map((mp: string) => (
+                const mmprojList = m.mmproj!.split(',')
+                return mmprojList.map((mp: string) => (
                   <option key={mp} value={mp}>{m.name} - {mp.split('/').pop()}</option>
                 ))
               })}

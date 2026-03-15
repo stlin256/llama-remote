@@ -112,8 +112,4 @@ cd llama-remote
 - **前端**: React + TypeScript + Vite
 - **风格**: Windows 98 怀旧风 🎮
 
----
 
-### License
-
-MIT License — do whatever you want.
