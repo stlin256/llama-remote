@@ -196,6 +196,12 @@ func (m *Manager) Start(id string) error {
 	// 添加其他参数
 	port := inst.Port
 	if port <= 0 {
+		// 尝试从params中获取端口
+		if p, ok := inst.Params["port"].(float64); ok {
+			port = int(p)
+		}
+	}
+	if port <= 0 {
 		port = 5000
 	}
 	args = append(args, "--port", fmt.Sprintf("%d", port))
@@ -360,8 +366,19 @@ func (m *Manager) WatchStatus(wsMgr *websocket.Manager, logMgr *logs.Manager) {
 					continue
 				}
 
+				// 获取端口
+				port := inst.Port
+				if port <= 0 {
+					if p, ok := inst.Params["port"].(float64); ok {
+						port = int(p)
+					}
+				}
+				if port <= 0 {
+					port = 5000
+				}
+
 				// 检查服务器是否在响应
-				url := fmt.Sprintf("http://127.0.0.1:%d/health", inst.Port)
+				url := fmt.Sprintf("http://127.0.0.1:%d/health", port)
 				log.Printf("WatchStatus: 检查 %s", url)
 				resp, err := httpClient.Get(url)
 				if err != nil {
