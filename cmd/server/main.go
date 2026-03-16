@@ -51,8 +51,11 @@ func main() {
 	logManager := logs.NewManager(cfg.LogDir)
 	defer logManager.Close()
 
+	// 初始化WebSocket管理器
+	wsMgr := websocket.NewManager()
+
 	// 初始化实例管理器
-	instanceMgr := instance.NewManager(cfg, logManager)
+	instanceMgr := instance.NewManager(cfg, logManager, wsMgr)
 	defer instanceMgr.StopAll()
 
 	// 初始化GPU监控
@@ -69,9 +72,6 @@ func main() {
 
 	// 初始化模型扫描器
 	modelScanner := models.NewScanner(cfg.Paths.ModelsDir)
-
-	// 初始化WebSocket管理器
-	wsMgr := websocket.NewManager()
 
 	// 初始化认证管理器
 	authMgr := auth.NewManager(cfg)

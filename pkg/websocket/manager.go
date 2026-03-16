@@ -112,3 +112,14 @@ func (m *Manager) BroadcastSystemStats(stats gpu.SystemStats) {
 		Payload: stats,
 	})
 }
+
+func (m *Manager) BroadcastInstanceProgress(instanceID, progress, message string) {
+	m.Broadcast(Message{
+		Type: "instance_progress",
+		Payload: map[string]string{
+			"id":      instanceID,
+			"progress": progress,
+			"message":  message,
+		},
+	})
+}

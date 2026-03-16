@@ -4,11 +4,20 @@ import { zh, en } from './index'
 const translations: Record<string, Record<string, string>> = { zh, en }
 
 export function useTranslation() {
-  const language = useStore((state) => (state as any).language || 'zh')
-  const setLanguage = useStore((state) => (state as any).setLanguage)
+  const language = useStore((state) => state.language)
+  const setLanguage = useStore((state) => state.setLanguage)
 
   const t = (key: string): string => {
-    return translations[language]?.[key] || translations.zh[key] || key
+    const langTranslations = translations[language]
+    if (!langTranslations) {
+      console.warn('[i18n] No translations found for language:', language)
+      return key
+    }
+    const result = langTranslations[key]
+    if (!result) {
+      console.warn('[i18n] No translation found for key:', key, 'in language:', language)
+    }
+    return result || translations.zh[key] || key
   }
 
   return { t, language, setLanguage }

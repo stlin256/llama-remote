@@ -58,6 +58,10 @@ interface AppState {
   // UI状态
   sidebarCollapsed: boolean
   toggleSidebar: () => void
+
+  // 实例加载进度
+  instanceProgress: Record<string, { progress: string; message: string }>
+  setInstanceProgress: (id: string, progress: string, message: string) => void
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -118,4 +122,10 @@ export const useStore = create<AppState>((set) => ({
   // UI
   sidebarCollapsed: false,
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+
+  // 实例加载进度
+  instanceProgress: {},
+  setInstanceProgress: (id, progress, message) => set((state) => ({
+    instanceProgress: { ...state.instanceProgress, [id]: { progress, message } }
+  })),
 }))

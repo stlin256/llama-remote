@@ -61,7 +61,7 @@ Before taking any action (either tool calls *or* responses to the user), you mus
 Reasoning: high`
 
 export default function Instances() {
-  const { instances, models, prompts, addInstance, updateInstance, removeInstance } = useStore()
+  const { instances, models, prompts, addInstance, updateInstance, removeInstance, instanceProgress } = useStore()
   const { t } = useTranslation()
   const [showModal, setShowModal] = useState(false)
   const [editingInstance, setEditingInstance] = useState<Instance | null>(null)
@@ -288,6 +288,11 @@ export default function Instances() {
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>
                     <span className={`status-dot status-${instance.status}`} style={{ marginRight: 4 }} />
                     {getStatusText(instance.status)}
+                    {(instance.status === 'starting' || instance.status === 'loading') && instanceProgress[instance.id] && (
+                      <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--win-gray-dark)' }}>
+                        {instanceProgress[instance.id].message}
+                      </span>
+                    )}
                   </td>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>
                     <div className="flex gap-1">

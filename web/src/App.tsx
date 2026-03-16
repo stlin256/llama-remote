@@ -12,12 +12,14 @@ import { useStore } from './store'
 import { api } from './hooks/api'
 import { useConfirm } from './components/ConfirmDialog'
 import { useMessage } from './components/MessageDialog'
+import { useTranslation } from './i18n/useTranslation'
 
 function AppContent() {
   const { setConfig, authenticated, setAuthenticated } = useStore()
   const [loading, setLoading] = useState(true)
   const { ConfirmDialog } = useConfirm()
   const { MessageDialog } = useMessage()
+  const { t } = useTranslation()
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -48,7 +50,7 @@ function AppContent() {
     return (
       <div className="desktop" style={{ justifyContent: 'center', alignItems: 'center' }}>
         <div className="window" style={{ width: 200, padding: 20, textAlign: 'center' }}>
-          加载中...
+          {t('loading')}
         </div>
       </div>
     )

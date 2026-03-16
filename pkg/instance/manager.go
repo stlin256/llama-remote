@@ -1,7 +1,9 @@
 package instance
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -42,14 +44,16 @@ type Manager struct {
 	instances  map[string]*Instance
 	mu         sync.RWMutex
 	logManager *logs.Manager
+	wsManager  *websocket.Manager
 	dataFile   string
 }
 
-func NewManager(cfg *config.Config, logManager *logs.Manager) *Manager {
+func NewManager(cfg *config.Config, logManager *logs.Manager, wsManager *websocket.Manager) *Manager {
 	m := &Manager{
 		cfg:        cfg,
 		instances:  make(map[string]*Instance),
 		logManager: logManager,
+		wsManager:  wsManager,
 		dataFile:   filepath.Join(cfg.DataDir, "instances.yaml"),
 	}
 	m.loadInstances()
@@ -258,21 +262,30 @@ func (m *Manager) Start(id string) error {
 	inst.LogFile = logFile
 
 	// 打开日志文件
-	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	lf, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		inst.Status = "error"
 		m.saveInstances()
 		return fmt.Errorf("failed to open log file: %w", err)
 	}
 
-	// 创建命令
+	// 创建命令，使用管道捕获输出
 	cmd := exec.Command(llamaBin, args...)
-	cmd.Stdout = f
-	cmd.Stderr = f
+
+	// 创建管道
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		lf.Close()
+		inst.Status = "error"
+		m.saveInstances()
+		return fmt.Errorf("failed to create stdout pipe: %w", err)
+	}
+	cmd.Stderr = lf
 
 	// 启动进程
 	if err := cmd.Start(); err != nil {
-		f.Close()
+		lf.Close()
+		stdoutPipe.Close()
 		inst.Status = "error"
 		m.saveInstances()
 		return fmt.Errorf("failed to start llama-server: %w", err)
@@ -285,8 +298,8 @@ func (m *Manager) Start(id string) error {
 	m.instances[inst.ID] = inst
 	m.mu.Unlock()
 
-	// 关闭日志文件
-	f.Close()
+	// 启动 goroutine 解析输出并写入日志文件
+	go m.parseOutput(inst.ID, stdoutPipe, lf)
 
 	// 等待服务真正启动
 	time.Sleep(2 * time.Second)
@@ -448,6 +461,85 @@ func (m *Manager) WatchStatus(wsMgr *websocket.Manager, logMgr *logs.Manager) {
 		}
 		m.mu.Unlock()
 	}
+}
+
+// parseOutput 解析llama-server输出并实时推送状态
+func (m *Manager) parseOutput(instanceID string, stdout io.ReadCloser, logFile *os.File) {
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// 写入日志文件
+		logFile.WriteString(line + "\n")
+		logFile.Sync()
+
+		// 解析进度信息并推送
+		progress, msg := m.parseLine(line)
+		if (progress != "" || msg != "") && m.wsManager != nil {
+			m.wsManager.BroadcastInstanceProgress(instanceID, progress, msg)
+		}
+
+		// 推送日志行
+		if m.wsManager != nil {
+			m.wsManager.BroadcastLog(instanceID, line)
+		}
+	}
+
+	logFile.Close()
+	stdout.Close()
+
+	// 检查进程是否退出
+	m.mu.Lock()
+	if inst, ok := m.instances[instanceID]; ok && inst.Status == "running" {
+		inst.Status = "stopped"
+		m.saveInstances()
+		if m.wsManager != nil {
+			m.wsManager.BroadcastInstanceStatus(instanceID, "stopped")
+		}
+	}
+	m.mu.Unlock()
+}
+
+// parseLine 解析单行输出，返回状态信息
+func (m *Manager) parseLine(line string) (string, string) {
+	lower := strings.ToLower(line)
+
+	// 模型加载相关
+	if strings.Contains(lower, "loading model") {
+		return "loading", "Loading model..."
+	}
+	if strings.Contains(lower, "loading model tensors") {
+		return "loading_tensors", "Loading model tensors..."
+	}
+	if strings.Contains(lower, "offloading") {
+		return "offloading", "Offloading layers to GPU..."
+	}
+	if strings.Contains(lower, "offloaded") {
+		return "offloaded", "Layers offloaded to GPU"
+	}
+	if strings.Contains(lower, "model buffer") {
+		return "loading", "Loading model buffer..."
+	}
+
+	// 初始化相关
+	if strings.Contains(lower, "initializing slots") {
+		return "initializing", "Initializing slots..."
+	}
+	if strings.Contains(lower, "slots are idle") {
+		return "ready", "Ready"
+	}
+
+	// 错误相关
+	if strings.Contains(lower, "error") || strings.Contains(lower, "failed") {
+		return "error", "Error occurred"
+	}
+
+	// 就绪
+	if strings.Contains(lower, "server started") || strings.Contains(lower, "listening on") {
+		return "ready", "Server ready"
+	}
+
+	return "", ""
 }
 
 // extractErrorMessage 从日志中提取错误信息

@@ -8,9 +8,7 @@ import { confirm } from '../components/ConfirmDialog'
 import { success, error } from '../components/MessageDialog'
 import { useTranslation } from '../i18n/useTranslation'
 
-const DEFAULT_PROMPT_TEMPLATE: PromptTemplate = {
-  name: '默认提示词 (强推理模型)',
-  content: `You are a very strong reasoner and planner. Use these critical instructions to structure your plans, thoughts, and responses.
+const DEFAULT_PROMPT_CONTENT = `You are a very strong reasoner and planner. Use these critical instructions to structure your plans, thoughts, and responses.
 
 Before taking any action (either tool calls *or* responses to the user), you must proactively, methodically, and independently plan and reason about:
 
@@ -53,7 +51,6 @@ Before taking any action (either tool calls *or* responses to the user), you mus
 8.2) This persistence must be intelligent: On *transient* errors (e.g. please try again), you *must* retry **unless an explicit retry limit (e.g., max x tries) has been reached**. If such a limit is hit, you *must* stop. On *other* errors, you must change your strategy or arguments, not repeat the same failed call.
 
 Reasoning: high`
-}
 
 export default function Templates() {
   const { prompts, setPrompts } = useStore()
@@ -151,7 +148,7 @@ export default function Templates() {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Lock size={12} style={{ color: 'var(--win-gray-dark)' }} />
-              <span style={{ fontWeight: 'bold' }}>{DEFAULT_PROMPT_TEMPLATE.name}</span>
+              <span style={{ fontWeight: 'bold' }}>{t('defaultPromptName')}</span>
             </div>
             <span style={{ fontSize: 10, color: 'var(--win-gray-dark)' }}>{t('builtInTemplate')}</span>
           </div>
@@ -168,7 +165,7 @@ export default function Templates() {
           >
             <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{t('templatePreview')}:</div>
             <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
-              {DEFAULT_PROMPT_TEMPLATE.content.slice(0, 500)}{DEFAULT_PROMPT_TEMPLATE.content.length > 500 ? '...' : ''}
+              {DEFAULT_PROMPT_CONTENT.slice(0, 500)}{DEFAULT_PROMPT_CONTENT.length > 500 ? '...' : ''}
             </pre>
           </div>
         </div>

@@ -9,7 +9,7 @@ import { useTranslation } from '../i18n/useTranslation'
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [time, setTime] = useState(new Date())
   const navigate = useNavigate()
-  const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, setSystemStats, setAuthenticated, instances, updateInstanceStatus } = useStore()
+  const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, setSystemStats, setAuthenticated, instances, updateInstanceStatus, setInstanceProgress, addLog, language } = useStore()
   const { t } = useTranslation()
 
   const navItems = [
@@ -81,6 +81,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         const instance = instances.find(i => i.id === id)
         const name = instance?.name || id
         error(t('instanceError').replace('{name}', name).replace('{error}', errMsg))
+      } else if (data.type === 'instance_progress') {
+        // 更新实例加载进度
+        const { id, progress, message } = data.payload
+        setInstanceProgress(id, progress, message)
+      } else if (data.type === 'log') {
+        // 添加日志行
+        const { instance: logInstance, content } = data.payload
+        if (logInstance) {
+          addLog({ instance: logInstance, content })
+        }
       }
     })
 
@@ -196,7 +206,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <span>{t('ready')}</span>
         <span>{runningCount} {t('running')}</span>
         <span style={{ marginLeft: 'auto' }}>
-          {time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+          {time.toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>
     </div>

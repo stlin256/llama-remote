@@ -61,7 +61,7 @@ export default function Logs() {
   return (
     <div className="flex flex-col gap-4" style={{ height: '100%' }}>
       <div className="flex items-center justify-between">
-        <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>{t('log')}</h2>
+        <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>{t('logs')}</h2>
         <div className="flex gap-2 items-center">
           <select
             className="input"
