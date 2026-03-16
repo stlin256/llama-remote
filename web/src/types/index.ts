@@ -29,6 +29,14 @@ export interface ModelInfo {
   size: number
   modified_time: number
   mmproj?: string
+  model_name?: string
+  architecture?: string
+  quantization?: string
+  vocabulary_size?: number
+  context_length?: number
+  embedding_length?: number
+  block_count?: number
+  attention_heads?: number
 }
 
 export interface Template {

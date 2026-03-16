@@ -20,12 +20,26 @@ export const zh = {
   memory: '内存',
   gpuStatus: 'GPU 状态',
   systemStatus: '系统状态',
+  gpuUtilization: 'GPU利用率',
+  gpuTemperature: 'GPU温度',
+  gpuPower: 'GPU功率',
+  gpuLoad: 'GPU负载',
+
+  // Models
+  modelLibrary: '模型库',
+  rescan: '重新扫描',
+  size: '大小',
+  modifiedTime: '修改时间',
+  architecture: '架构',
+  quantization: '量化',
+  contextLength: '上下文',
 
   // Layout
   ready: '就绪',
   confirmLogout: '确定要退出登录吗？',
   confirmStopAll: '确定要停止所有运行中的实例吗？',
   instanceError: '实例 "{name}" 错误: {error}',
+  log: '日志',
 
   // Instances
   used: '已用',
@@ -35,6 +49,7 @@ export const zh = {
   noGpu: '无 GPU',
 
   // Instances
+  instanceManagement: '实例管理',
   instanceList: '实例列表',
   createInstance: '新建实例',
   editInstance: '编辑实例',
@@ -42,7 +57,7 @@ export const zh = {
   instanceName: '实例名称',
   modelFile: '模型文件',
   selectModel: '选择模型...',
-  mmproj: 'MMProj (多模态)',
+  mmproj: 'MMProj',
   noMmproj: '无',
   promptTemplate: '提示词模板',
   noPrompt: '无',
@@ -70,6 +85,27 @@ export const zh = {
   confirmDeleteInstance: '确定要删除这个实例吗?',
   auto: '自动',
   required: '必填',
+  noInstancesYet: '暂无实例',
+  createFirstInstance: '创建第一个实例',
+  modelInfo: '模型信息',
+  visionModelConfigured: '视觉模型已配置',
+  arch: '架构',
+  quant: '量化',
+  embed: 'Embedding',
+  blocks: '层数',
+  heads: '注意力头',
+  vocab: '词表',
+  path: '路径',
+  mmprojOptional: 'MMProj (可选)',
+  promptTemplateOptional: '提示词模板 (可选)',
+  noPromptTemplate: '无模板',
+  defaultPromptTemplate: '默认模板',
+  startupParams: '启动参数',
+  actions: '操作',
+  operationFailed: '操作失败',
+  deleteFailed: '删除失败',
+  startFailed: '启动失败',
+  stopFailed: '停止失败',
 
   // Status
   status: '状态',
@@ -110,6 +146,9 @@ export const zh = {
   templatePlaceholder: '代码助手',
   promptContentPlaceholder: '你是一个专业的编程助手...',
   noCustomTemplates: '暂无自定义提示词模板',
+  defaultPromptName: '默认提示词 (强推理模型)',
+  saveFailed: '保存失败',
+  clearFailed: '清空失败',
 
   // Logs
   selectInstance: '选择实例...',
@@ -179,12 +218,30 @@ export const en = {
   name: 'Name',
   model: 'Model',
   noInstances: 'No instances',
+  cpu: 'CPU',
+  memory: 'Memory',
+  gpuStatus: 'GPU Status',
+  systemStatus: 'System Status',
+  gpuUtilization: 'GPU Utilization',
+  gpuTemperature: 'GPU Temp',
+  gpuPower: 'GPU Power',
+  gpuLoad: 'GPU Load',
+
+  // Models
+  modelLibrary: 'Model Library',
+  rescan: 'Rescan',
+  size: 'Size',
+  modifiedTime: 'Modified',
+  architecture: 'Architecture',
+  quantization: 'Quantization',
+  contextLength: 'Context',
 
   // Layout
   ready: 'Ready',
   confirmLogout: 'Logout?',
   confirmStopAll: 'Stop all running instances?',
   instanceError: 'Instance "{name}" error: {error}',
+  log: 'Logs',
 
   // Instances
   used: 'Used',
@@ -194,6 +251,7 @@ export const en = {
   noGpu: 'No GPU',
 
   // Instances
+  instanceManagement: 'Instance Management',
   instanceList: 'Instance List',
   createInstance: 'New Instance',
   editInstance: 'Edit Instance',
@@ -201,7 +259,7 @@ export const en = {
   instanceName: 'Instance Name',
   modelFile: 'Model File',
   selectModel: 'Select model...',
-  mmproj: 'MMProj (Multimodal)',
+  mmproj: 'MMProj',
   noMmproj: 'None',
   promptTemplate: 'Prompt Template',
   noPrompt: 'None',
@@ -229,6 +287,27 @@ export const en = {
   confirmDeleteInstance: 'Delete this instance?',
   auto: 'Auto',
   required: 'Required',
+  noInstancesYet: 'No instances',
+  createFirstInstance: 'Create First Instance',
+  modelInfo: 'Model Info',
+  visionModelConfigured: 'Vision model configured',
+  arch: 'Arch',
+  quant: 'Quant',
+  embed: 'Embed',
+  blocks: 'Blocks',
+  heads: 'Heads',
+  vocab: 'Vocab',
+  path: 'Path',
+  mmprojOptional: 'MMProj (Optional)',
+  promptTemplateOptional: 'Prompt Template (Optional)',
+  noPromptTemplate: 'No Template',
+  defaultPromptTemplate: 'Default Template',
+  startupParams: 'Startup Params',
+  actions: 'Actions',
+  operationFailed: 'Operation failed',
+  deleteFailed: 'Delete failed',
+  startFailed: 'Start failed',
+  stopFailed: 'Stop failed',
 
   // Status
   status: 'Status',
@@ -269,6 +348,9 @@ export const en = {
   templatePlaceholder: 'Code Assistant',
   promptContentPlaceholder: 'You are a professional coding assistant...',
   noCustomTemplates: 'No custom prompt templates',
+  defaultPromptName: 'Default Prompt (Strong Reasoning)',
+  saveFailed: 'Save failed',
+  clearFailed: 'Clear failed',
 
   // Logs
   selectInstance: 'Select instance...',

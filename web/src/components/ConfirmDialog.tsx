@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from '../i18n/useTranslation'
 
 interface ConfirmDialogProps {
   show: boolean
@@ -9,6 +10,7 @@ interface ConfirmDialogProps {
 }
 
 function ConfirmDialog({ show, title, message, onConfirm, onCancel }: ConfirmDialogProps) {
+  const { t } = useTranslation()
   if (!show) return null
 
   return (
@@ -37,8 +39,8 @@ function ConfirmDialog({ show, title, message, onConfirm, onCancel }: ConfirmDia
             <span style={{ flex: 1 }}>{message}</span>
           </div>
           <div className="flex justify-end gap-2">
-            <button onClick={onCancel} className="btn" style={{ minWidth: 60 }}>{localStorage.getItem('language') === 'en' ? 'No' : '否'}</button>
-            <button onClick={onConfirm} className="btn btn-primary" style={{ minWidth: 60 }}>{localStorage.getItem('language') === 'en' ? 'Yes' : '是'}</button>
+            <button onClick={onCancel} className="btn" style={{ minWidth: 60 }}>{t('no')}</button>
+            <button onClick={onConfirm} className="btn btn-primary" style={{ minWidth: 60 }}>{t('yes')}</button>
           </div>
         </div>
       </div>
@@ -46,42 +48,33 @@ function ConfirmDialog({ show, title, message, onConfirm, onCancel }: ConfirmDia
   )
 }
 
-// Get language from localStorage
-function getLang(): string {
-  return localStorage.getItem('language') || 'zh'
-}
-
 // Global confirm state
 let confirmResolve: ((value: boolean) => void) | null = null
 
 export function confirm(message: string, title?: string): Promise<boolean> {
-  const lang = getLang()
-  const defaultTitle = lang === 'zh' ? '确认' : 'Confirm'
   return new Promise((resolve) => {
     confirmResolve = resolve
     window.dispatchEvent(new CustomEvent('showConfirm', {
-      detail: { message, title: title || defaultTitle }
+      detail: { message, title: title || '' }
     }))
   })
 }
 
 // Hook to use confirm dialog
-function getDefaultTitle(): string {
-  return localStorage.getItem('language') === 'en' ? 'Confirm' : '确认'
-}
-
 export function useConfirm() {
+  const { t } = useTranslation()
   const [show, setShow] = useState(false)
-  const [data, setData] = useState({ title: getDefaultTitle(), message: '' })
+  const [data, setData] = useState({ title: '', message: '' })
 
   useEffect(() => {
     const handler = (e: CustomEvent) => {
-      setData(e.detail)
+      const title = e.detail.title || t('confirm')
+      setData({ title, message: e.detail.message })
       setShow(true)
     }
     window.addEventListener('showConfirm', handler as EventListener)
     return () => window.removeEventListener('showConfirm', handler as EventListener)
-  }, [])
+  }, [t])
 
   const handleConfirm = () => {
     setShow(false)

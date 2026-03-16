@@ -81,8 +81,10 @@ export default function Models() {
             <thead>
               <tr style={{ background: 'var(--win-gray)', textAlign: 'left' }}>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('modelName')}</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('architecture')}</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('quantization')}</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('contextLength')}</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('size')}</th>
-                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('modifiedTime')}</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('mmproj')}</th>
               </tr>
             </thead>
@@ -90,23 +92,30 @@ export default function Models() {
               {filteredModels.map((model) => (
                 <tr key={model.path}>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>
-                    <div style={{ fontWeight: 'bold' }}>{model.name}</div>
+                    <div style={{ fontWeight: 'bold' }}>{model.model_name || model.name}</div>
                     <div style={{ fontSize: 9, color: 'var(--win-gray-dark)', fontFamily: 'monospace' }}>{model.path}</div>
                   </td>
-                  <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{formatSize(model.size)}</td>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>
-                    {new Date(model.modified_time * 1000).toLocaleDateString()}
+                    {model.architecture || '-'}
                   </td>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>
-                    {model.mmproj ? (
-                      <div className="flex gap-1" style={{ flexWrap: 'wrap' }}>
-                        {model.mmproj.split(',').map((mp: string) => (
-                          <span key={mp} style={{ background: 'var(--win-teal)', color: 'white', padding: '1px 4px', fontSize: 9 }}>
-                            {mp.split('/').pop()}
-                          </span>
-                        ))}
-                      </div>
-                    ) : '-'}
+                    {model.quantization || '-'}
+                  </td>
+                  <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>
+                    {model.context_length ? model.context_length.toLocaleString() : '-'}
+                  </td>
+                  <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{formatSize(model.size)}</td>
+                  <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)', textAlign: 'center' }}>
+                    <span style={{
+                      background: model.mmproj ? '#00aa00' : '#aa0000',
+                      color: 'white',
+                      padding: '1px 5px',
+                      fontSize: 10,
+                      fontFamily: 'Marlett, Wingdings, sans-serif',
+                      fontWeight: 'bold'
+                    }}>
+                      {model.mmproj ? '✓' : '✗'}
+                    </span>
                   </td>
                 </tr>
               ))}

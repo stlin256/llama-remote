@@ -124,11 +124,20 @@ export default function Instances() {
     const newName = formData.name || (model ? model.name.replace('.gguf', '') : '')
     const newMmproj = model?.mmproj || ''
 
+    // Default ngl and context from model
+    const defaultNgl = model?.block_count ?? 999
+    const defaultContext = model?.context_length ?? 8192
+
     setFormData({
       ...formData,
       model: modelPath,
       mmproj: newMmproj,
       name: newName,
+      params: {
+        ...formData.params,
+        ngl: defaultNgl,
+        context: defaultContext,
+      },
     })
   }
 
@@ -147,9 +156,13 @@ export default function Instances() {
 
     // Validate and sanitize params
     const params = formData.params || {}
+    // Use model's max values as defaults if params are empty
+    const defaultNgl = selectedModel?.block_count ?? 999
+    const defaultContext = selectedModel?.context_length ?? 8192
+
     const sanitizedParams = {
-      ngl: Math.max(0, Math.floor(Number(params.ngl) || 999)),
-      context: Math.max(1, Math.min(2147483647, Math.floor(Number(params.context) || 8192))),
+      ngl: params.ngl === undefined ? defaultNgl : Math.max(0, Math.floor(Number(params.ngl) || defaultNgl)),
+      context: params.context === undefined ? defaultContext : Math.max(1, Math.min(2147483647, Math.floor(Number(params.context) || defaultContext))),
       host: params.host || '0.0.0.0',
       port: Math.max(1, Math.min(65535, Math.floor(Number(params.port) || 5000))),
       threads: params.threads ? Math.max(1, Math.floor(Number(params.threads))) : undefined,
@@ -332,14 +345,125 @@ export default function Instances() {
             </select>
           </div>
 
-          {/* Model Info */}
+          {/* Model Info - Win98 Style */}
           {selectedModel && (
-            <div className="panel" style={{ padding: 8 }}>
-              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{t('modelInfo')}</div>
-              <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, fontSize: 10 }}>
-                <div>{t('size')}: {formatSize(selectedModel.size)}</div>
-                <div>{t('path')}: {selectedModel.path}</div>
-                {selectedModel.mmproj && <div>{t('mmproj')}: {t('modelConfigured')}</div>}
+            <div style={{
+              border: '2px solid',
+              borderColor: '#fff #808080 #808080 #fff',
+              background: '#c0c0c0',
+              padding: 8,
+              marginTop: 8
+            }}>
+              {/* Title bar */}
+              <div style={{
+                background: 'linear-gradient(90deg, #000080, #1084d0)',
+                color: 'white',
+                padding: '2px 4px',
+                fontSize: 11,
+                fontWeight: 'bold',
+                marginBottom: 8,
+                fontFamily: 'Tahoma, sans-serif'
+              }}>
+                {selectedModel.model_name || selectedModel.name}
+              </div>
+
+              {/* Specs grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: 4,
+                fontSize: 11,
+                fontFamily: 'Tahoma, sans-serif'
+              }}>
+                {selectedModel.architecture && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ color: '#000080', fontWeight: 'bold' }}>{t('arch')}:</span>
+                    <span>{selectedModel.architecture}</span>
+                  </div>
+                )}
+                {selectedModel.quantization && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ color: '#000080', fontWeight: 'bold' }}>{t('quant')}:</span>
+                    <span style={{
+                      background: '#000080',
+                      color: 'white',
+                      padding: '0 4px'
+                    }}>{selectedModel.quantization}</span>
+                  </div>
+                )}
+                {selectedModel.context_length && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ color: '#000080', fontWeight: 'bold' }}>Context:</span>
+                    <span>{selectedModel.context_length.toLocaleString()}</span>
+                  </div>
+                )}
+                {selectedModel.embedding_length && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ color: '#000080', fontWeight: 'bold' }}>{t('embed')}:</span>
+                    <span>{selectedModel.embedding_length}</span>
+                  </div>
+                )}
+                {selectedModel.block_count && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ color: '#000080', fontWeight: 'bold' }}>{t('blocks')}:</span>
+                    <span>{selectedModel.block_count}</span>
+                  </div>
+                )}
+                {selectedModel.attention_heads && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ color: '#000080', fontWeight: 'bold' }}>{t('heads')}:</span>
+                    <span>{selectedModel.attention_heads}</span>
+                  </div>
+                )}
+                {selectedModel.vocabulary_size && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ color: '#000080', fontWeight: 'bold' }}>{t('vocab')}:</span>
+                    <span>{selectedModel.vocabulary_size.toLocaleString()}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ color: '#000080', fontWeight: 'bold' }}>Size:</span>
+                  <span>{formatSize(selectedModel.size)}</span>
+                </div>
+              </div>
+
+              {/* Path */}
+              <div style={{
+                marginTop: 8,
+                padding: 4,
+                background: '#fff',
+                border: '1px solid',
+                borderColor: '#808080 #fff #fff #808080',
+                fontSize: 10,
+                fontFamily: 'monospace',
+                color: '#000'
+              }}>
+                {selectedModel.path}
+              </div>
+
+              {/* MMproj indicator */}
+              <div style={{
+                marginTop: 8,
+                padding: 4,
+                background: '#c0c0c0',
+                border: '2px solid',
+                borderColor: '#fff #808080 #808080 #fff',
+                fontSize: 10,
+                fontFamily: 'Tahoma, sans-serif',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4
+              }}>
+                <span style={{
+                  background: selectedModel.mmproj ? '#00aa00' : '#aa0000',
+                  color: 'white',
+                  padding: '0 3px',
+                  fontSize: 9,
+                  fontFamily: 'Marlett, Wingdings, sans-serif'
+                }}>
+                  {selectedModel.mmproj ? '✓' : '✗'}
+                </span>
+                <span>MMProj</span>
               </div>
             </div>
           )}
@@ -395,11 +519,16 @@ export default function Instances() {
                 <input
                   type="number"
                   className="input"
-                  style={{ width: '100%' }}
-                  value={formData.params?.ngl ?? 999}
+                  style={{
+                    width: '100%',
+                    background: formData.params?.ngl === undefined ? '#e0e0e0' : '#fff',
+                    color: formData.params?.ngl === undefined ? '#808080' : '#000'
+                  }}
+                  value={formData.params?.ngl ?? ''}
+                  placeholder={selectedModel?.block_count?.toString() || '999'}
                   onChange={e => setFormData({
                     ...formData,
-                    params: { ...formData.params, ngl: parseInt(e.target.value) || 999 }
+                    params: { ...formData.params, ngl: e.target.value === '' ? undefined : parseInt(e.target.value) }
                   })}
                 />
               </div>
@@ -408,11 +537,16 @@ export default function Instances() {
                 <input
                   type="number"
                   className="input"
-                  style={{ width: '100%' }}
-                  value={formData.params?.context ?? 8192}
+                  style={{
+                    width: '100%',
+                    background: formData.params?.context === undefined ? '#e0e0e0' : '#fff',
+                    color: formData.params?.context === undefined ? '#808080' : '#000'
+                  }}
+                  value={formData.params?.context ?? ''}
+                  placeholder={selectedModel?.context_length?.toString() || '8192'}
                   onChange={e => setFormData({
                     ...formData,
-                    params: { ...formData.params, context: parseInt(e.target.value) || 8192 }
+                    params: { ...formData.params, context: e.target.value === '' ? undefined : parseInt(e.target.value) }
                   })}
                 />
               </div>

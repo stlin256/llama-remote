@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from '../i18n/useTranslation'
 
 type MessageType = 'success' | 'error' | 'info'
 
@@ -11,6 +12,7 @@ interface MessageDialogProps {
 }
 
 function MessageDialog({ show, title, message, type, onClose }: MessageDialogProps) {
+  const { t } = useTranslation()
   if (!show) return null
 
   const iconBg = type === 'success' ? '#00aa00' : type === 'error' ? '#aa0000' : 'var(--win-blue)'
@@ -42,7 +44,7 @@ function MessageDialog({ show, title, message, type, onClose }: MessageDialogPro
             <span style={{ flex: 1, wordBreak: 'break-word' }}>{message}</span>
           </div>
           <div className="flex justify-end">
-            <button onClick={onClose} className="btn btn-primary" style={{ minWidth: 60 }}>{localStorage.getItem('language') === 'en' ? 'OK' : '确定'}</button>
+            <button onClick={onClose} className="btn btn-primary" style={{ minWidth: 60 }}>{t('ok')}</button>
           </div>
         </div>
       </div>
@@ -50,25 +52,14 @@ function MessageDialog({ show, title, message, type, onClose }: MessageDialogPro
   )
 }
 
-// Get language from localStorage
-function getLang(): string {
-  return localStorage.getItem('language') || 'zh'
-}
-
 // Global message state
 let messageResolve: (() => void) | null = null
 
 export function message(msg: string, type: MessageType = 'info', title?: string): Promise<void> {
-  const lang = getLang()
-  const defaultTitles: Record<string, Record<string, string>> = {
-    zh: { info: '提示', success: '成功', error: '错误', warning: '警告' },
-    en: { info: 'Info', success: 'Success', error: 'Error', warning: 'Warning' }
-  }
-  const finalTitle = title || defaultTitles[lang][type] || 'Info'
   return new Promise((resolve) => {
     messageResolve = resolve
     window.dispatchEvent(new CustomEvent('showMessage', {
-      detail: { message: msg, type, title: finalTitle }
+      detail: { message: msg, type, title: title || '' }
     }))
   })
 }
@@ -86,22 +77,25 @@ export function info(msg: string, title?: string) {
 }
 
 // Hook to use message dialog
-function getDefaultTitle(): string {
-  return localStorage.getItem('language') === 'en' ? 'Info' : '提示'
-}
-
 export function useMessage() {
+  const { t } = useTranslation()
   const [show, setShow] = useState(false)
-  const [data, setData] = useState({ title: getDefaultTitle(), message: '', type: 'info' as MessageType })
+  const [data, setData] = useState({ title: '', message: '', type: 'info' as MessageType })
 
   useEffect(() => {
     const handler = (e: CustomEvent) => {
-      setData(e.detail)
+      const defaultTitles: Record<string, Record<string, string>> = {
+        zh: { info: '提示', success: '成功', error: '错误', warning: '警告' },
+        en: { info: 'Info', success: 'Success', error: 'Error', warning: 'Warning' }
+      }
+      const lang = t('language') === '语言' ? 'zh' : 'en'
+      const title = e.detail.title || defaultTitles[lang][e.detail.type] || 'Info'
+      setData({ title, message: e.detail.message, type: e.detail.type })
       setShow(true)
     }
     window.addEventListener('showMessage', handler as EventListener)
     return () => window.removeEventListener('showMessage', handler as EventListener)
-  }, [])
+  }, [t])
 
   const handleClose = () => {
     setShow(false)
