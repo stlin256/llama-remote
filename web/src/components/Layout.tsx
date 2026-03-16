@@ -9,7 +9,7 @@ import { useTranslation } from '../i18n/useTranslation'
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [time, setTime] = useState(new Date())
   const navigate = useNavigate()
-  const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, setSystemStats, setAuthenticated, instances, updateInstanceStatus, setInstanceProgress, addLog, language } = useStore()
+  const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, setSystemStats, setAuthenticated, instances, updateInstanceStatus, setInstanceProgress, addLog, setInstanceError, language } = useStore()
   const { t } = useTranslation()
 
   const navItems = [
@@ -78,6 +78,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       } else if (data.type === 'instance_error') {
         // 显示实例错误
         const { id, message: errMsg } = data.payload
+        setInstanceError(id, errMsg)
         const instance = instances.find(i => i.id === id)
         const name = instance?.name || id
         error(t('instanceError').replace('{name}', name).replace('{error}', errMsg))

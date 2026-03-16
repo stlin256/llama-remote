@@ -411,7 +411,27 @@ func (m *Manager) WatchStatus(wsMgr *websocket.Manager, logMgr *logs.Manager) {
 				url := fmt.Sprintf("http://127.0.0.1:%d/health", port)
 				resp, err := httpClient.Get(url)
 				if err != nil {
-					// 服务器未响应，可能是加载中
+					// 服务器未响应，检查是否是错误状态
+					errMsg := extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
+					// 检查日志中是否有关键错误信息
+					lowerErr := strings.ToLower(errMsg)
+					if strings.Contains(lowerErr, "failed") ||
+						strings.Contains(lowerErr, "error") ||
+						strings.Contains(lowerErr, "out of memory") ||
+						strings.Contains(lowerErr, "cuda") ||
+						strings.Contains(lowerErr, "abort") ||
+						strings.Contains(lowerErr, "cannot") {
+						// 真正的错误
+						inst.Status = "error"
+						inst.PID = 0
+						wsMgr.BroadcastInstanceStatus(inst.ID, "error")
+						if errMsg != "" {
+							wsMgr.BroadcastInstanceError(inst.ID, errMsg)
+						}
+						m.saveInstances()
+						continue
+					}
+					// 否则可能是加载中
 					if inst.Status != "loading" {
 						inst.Status = "loading"
 						wsMgr.BroadcastInstanceStatus(inst.ID, "loading")
@@ -529,17 +549,40 @@ func (m *Manager) parseLine(line string) (string, string) {
 		return "ready", "Ready"
 	}
 
-	// 错误相关
+	// 错误相关 - 多种错误模式
+	if strings.Contains(lower, "failed to load") ||
+		strings.Contains(lower, "failed to initialize") ||
+		strings.Contains(lower, "failed to create") ||
+		strings.Contains(lower, "exiting due to") ||
+		strings.Contains(lower, "out of memory") ||
+		strings.Contains(lower, "cuda") && strings.Contains(lower, "failed") ||
+		strings.Contains(lower, "cannot meet") {
+		return "error", "Error: " + extractBriefMessage(line)
+	}
+
+	// 一般错误
 	if strings.Contains(lower, "error") || strings.Contains(lower, "failed") {
 		return "error", "Error occurred"
 	}
 
-	// 就绪
+	// 就绪信号 - 关键！
+	if strings.Contains(lower, "model loaded") {
+		return "ready", "Model loaded successfully"
+	}
 	if strings.Contains(lower, "server started") || strings.Contains(lower, "listening on") {
 		return "ready", "Server ready"
 	}
 
 	return "", ""
+}
+
+// extractBriefMessage 提取简短的错误信息
+func extractBriefMessage(line string) string {
+	// 截取关键部分
+	if len(line) > 80 {
+		return line[:80] + "..."
+	}
+	return line
 }
 
 // extractErrorMessage 从日志中提取错误信息
@@ -552,7 +595,14 @@ func extractErrorMessage(logContent string) string {
 	for i := len(lines) - 1; i >= 0; i-- {
 		line := lines[i]
 		lower := strings.ToLower(line)
-		if strings.Contains(lower, "error") || strings.Contains(lower, "failed") || strings.Contains(lower, "panic") {
+		// 关键错误模式
+		if strings.Contains(lower, "failed to") ||
+			strings.Contains(lower, "failed") && strings.Contains(lower, "error") ||
+			strings.Contains(lower, "exiting due to") ||
+			strings.Contains(lower, "out of memory") ||
+			strings.Contains(lower, "cannot meet") ||
+			strings.Contains(lower, "panic") ||
+			strings.Contains(lower, "abort") {
 			return line
 		}
 	}

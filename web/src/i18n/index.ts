@@ -38,6 +38,8 @@ export const zh = {
   ready: '就绪',
   confirmLogout: '确定要退出登录吗？',
   confirmStopAll: '确定要停止所有运行中的实例吗？',
+  viewError: '查看错误',
+  errorDetails: '错误详情',
   instanceError: '实例 "{name}" 错误: {error}',
   log: '日志',
 
@@ -240,6 +242,8 @@ export const en = {
   ready: 'Ready',
   confirmLogout: 'Logout?',
   confirmStopAll: 'Stop all running instances?',
+  viewError: 'View Error',
+  errorDetails: 'Error Details',
   instanceError: 'Instance "{name}" error: {error}',
   log: 'Logs',
 

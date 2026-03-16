@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { Plus, Play, Square, Trash2, Edit2, Server } from 'lucide-react'
+import { Plus, Play, Square, Trash2, Edit2, Server, AlertCircle } from 'lucide-react'
 import { useStore } from '../store'
 import { api } from '../hooks/api'
 import type { Instance, ModelInfo } from '../types'
 import Modal from '../components/Modal'
 import { confirm } from '../components/ConfirmDialog'
-import { error } from '../components/MessageDialog'
+import { error as showError } from '../components/MessageDialog'
 import { useTranslation } from '../i18n/useTranslation'
 
 const DEFAULT_PARAMS = {
@@ -61,11 +61,13 @@ Before taking any action (either tool calls *or* responses to the user), you mus
 Reasoning: high`
 
 export default function Instances() {
-  const { instances, models, prompts, addInstance, updateInstance, removeInstance, instanceProgress } = useStore()
+  const { instances, models, prompts, addInstance, updateInstance, removeInstance, instanceProgress, instanceErrors } = useStore()
   const { t } = useTranslation()
   const [showModal, setShowModal] = useState(false)
   const [editingInstance, setEditingInstance] = useState<Instance | null>(null)
   const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null)
+  const [showErrorDialog, setShowErrorDialog] = useState(false)
+  const [currentError, setCurrentError] = useState('')
   const [formData, setFormData] = useState<Partial<Instance>>({
     name: '',
     model: '',
@@ -144,13 +146,13 @@ export default function Instances() {
   const validateAndSubmit = async () => {
     // Validate instance name
     if (!formData.name || formData.name.trim() === '') {
-      await error(t('instanceNameRequired'))
+      await showError(t('instanceNameRequired'))
       return
     }
 
     // Validate model
     if (!formData.model) {
-      await error(t('pleaseSelectModel'))
+      await showError(t('pleaseSelectModel'))
       return
     }
 
@@ -199,7 +201,7 @@ export default function Instances() {
       }
       setShowModal(false)
     } catch (e) {
-      await error(`${t('operationFailed')}: ${e}`)
+      await showError(`${t('operationFailed')}: ${e}`)
     }
   }
 
@@ -209,7 +211,7 @@ export default function Instances() {
       await api.deleteInstance(id)
       removeInstance(id)
     } catch (e) {
-      await error(`${t('deleteFailed')}: ${e}`)
+      await showError(`${t('deleteFailed')}: ${e}`)
     }
   }
 
@@ -220,7 +222,7 @@ export default function Instances() {
       updateInstance(id, { status: 'running' })
     } catch (e) {
       updateInstance(id, { status: 'error' })
-      await error(`${t('startFailed')}: ${e}`)
+      await showError(`${t('startFailed')}: ${e}`)
     }
   }
 
@@ -229,7 +231,7 @@ export default function Instances() {
       await api.stopInstance(id)
       updateInstance(id, { status: 'stopped' })
     } catch (e) {
-      await error(`${t('stopFailed')}: ${e}`)
+      await showError(`${t('stopFailed')}: ${e}`)
     }
   }
 
@@ -288,6 +290,16 @@ export default function Instances() {
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>
                     <span className={`status-dot status-${instance.status}`} style={{ marginRight: 4 }} />
                     {getStatusText(instance.status)}
+                    {instance.status === 'error' && instanceErrors[instance.id] && (
+                      <button
+                        onClick={() => { setCurrentError(instanceErrors[instance.id]); setShowErrorDialog(true) }}
+                        className="btn"
+                        style={{ marginLeft: 8, padding: '1px 4px', minWidth: 'auto', background: '#aa0000', color: 'white' }}
+                        title={t('viewError') || 'View Error'}
+                      >
+                        <AlertCircle size={10} />
+                      </button>
+                    )}
                     {(instance.status === 'starting' || instance.status === 'loading') && instanceProgress[instance.id] && (
                       <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--win-gray-dark)' }}>
                         {instanceProgress[instance.id].message}
@@ -623,6 +635,16 @@ export default function Instances() {
         <div className="flex gap-2 justify-end mt-4">
           <button onClick={() => setShowModal(false)} className="btn">{t('cancel')}</button>
           <button onClick={validateAndSubmit} className="btn btn-primary">{t('save')}</button>
+        </div>
+      </Modal>
+
+      {/* Error Details Dialog */}
+      <Modal title={t('errorDetails') || 'Error Details'} show={showErrorDialog} onClose={() => setShowErrorDialog(false)} width={600}>
+        <div style={{ fontSize: 11, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 300, overflow: 'auto' }}>
+          {currentError}
+        </div>
+        <div className="flex gap-2 justify-end mt-4">
+          <button onClick={() => setShowErrorDialog(false)} className="btn">{t('close')}</button>
         </div>
       </Modal>
     </div>

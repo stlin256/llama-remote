@@ -32,6 +32,10 @@ interface AppState {
   updateInstanceStatus: (id: string, status: string) => void
   removeInstance: (id: string) => void
 
+  // 实例错误信息
+  instanceErrors: Record<string, string>
+  setInstanceError: (id: string, error: string) => void
+
   // 模型
   models: ModelInfo[]
   setModels: (models: ModelInfo[]) => void
@@ -91,7 +95,14 @@ export const useStore = create<AppState>((set) => ({
     instances: state.instances.map((i) => i.id === id ? { ...i, status: status as Instance['status'] } : i)
   })),
   removeInstance: (id) => set((state) => ({
-    instances: state.instances.filter((i) => i.id !== id)
+    instances: state.instances.filter((i) => i.id !== id),
+    instanceErrors: Object.fromEntries(Object.entries(state.instanceErrors).filter(([key]) => key !== id))
+  })),
+
+  // 实例错误信息
+  instanceErrors: {},
+  setInstanceError: (id, error) => set((state) => ({
+    instanceErrors: { ...state.instanceErrors, [id]: error }
   })),
 
   // 模型
