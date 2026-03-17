@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from 'react'
+import { ReactNode, useState, useEffect, useRef } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useStore } from '../store'
 import { api, createWebSocket } from '../hooks/api'
@@ -7,6 +7,7 @@ import { error as showError } from '../components/MessageDialog'
 import { useTranslation } from '../i18n/useTranslation'
 import { useIsMobile } from '../hooks/useMediaQuery'
 import { Home, Server, BookOpen, FileText, Settings, LogOut, Square } from 'lucide-react'
+import { INSTANCE_REFRESH_INTERVAL } from '../utils'
 
 interface ResponsiveLayoutProps {
   children: ReactNode
@@ -18,6 +19,12 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   const navigate = useNavigate()
   const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, setSystemStats, setAuthenticated, instances, updateInstanceStatus, setInstanceProgress, addLog, setInstanceError, language } = useStore()
   const { t } = useTranslation()
+
+  // Use ref to avoid stale closure in WebSocket callback
+  const instancesRef = useRef(instances)
+  instancesRef.current = instances
+  const tRef = useRef(t)
+  tRef.current = t
 
   const navItems = [
     { path: '/dashboard', label: t('dashboard'), icon: Home },
@@ -84,9 +91,9 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
       } else if (data.type === 'instance_error') {
         const { id, message: errMsg } = data.payload
         setInstanceError(id, errMsg)
-        const instance = instances.find(i => i.id === id)
+        const instance = instancesRef.current.find(i => i.id === id)
         const name = instance?.name || id
-        showError(t('instanceError').replace('{name}', name).replace('{error}', errMsg))
+        showError(tRef.current('instanceError').replace('{name}', name).replace('{error}', errMsg))
       } else if (data.type === 'instance_progress') {
         const { id, progress, message } = data.payload
         setInstanceProgress(id, progress, message)
@@ -106,7 +113,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
       } catch (e) {
         // ignore
       }
-    }, 5000)
+    }, INSTANCE_REFRESH_INTERVAL)
 
     return () => {
       ws.close()
