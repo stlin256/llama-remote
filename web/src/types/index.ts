@@ -79,6 +79,9 @@ export interface Config {
   auth?: {
     enable: boolean
   }
+  chat?: {
+    enable: boolean
+  }
 }
 
 export interface LogMessage {

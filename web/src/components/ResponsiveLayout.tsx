@@ -1,12 +1,12 @@
 import { ReactNode, useState, useEffect, useRef } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useStore } from '../store'
 import { api, createWebSocket } from '../hooks/api'
 import { confirm } from '../components/ConfirmDialog'
 import { error as showError } from '../components/MessageDialog'
 import { useTranslation } from '../i18n/useTranslation'
 import { useIsMobile } from '../hooks/useMediaQuery'
-import { Home, Server, BookOpen, FileText, Settings, LogOut, Square } from 'lucide-react'
+import { Home, Server, BookOpen, FileText, Settings, LogOut, Square, MessageCircle } from 'lucide-react'
 import { INSTANCE_REFRESH_INTERVAL } from '../utils'
 
 interface ResponsiveLayoutProps {
@@ -17,23 +17,30 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   const isMobile = useIsMobile()
   const [menuOpen, setMenuOpen] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   const { setConfig, setInstances, setModels, setTemplates, setPrompts, setGpuStats, setSystemStats, setAuthenticated, instances, updateInstanceStatus, setInstanceProgress, addLog, setInstanceError, language } = useStore()
   const { t } = useTranslation()
 
-  // Use ref to avoid stale closure in WebSocket callback
-  const instancesRef = useRef(instances)
-  instancesRef.current = instances
-  const tRef = useRef(t)
-  tRef.current = t
-
+  // Define navItems before using it
   const navItems = [
     { path: '/dashboard', label: t('dashboard'), icon: Home },
+    { path: '/chat', label: t('chat'), icon: MessageCircle },
     { path: '/instances', label: t('instances'), icon: Server },
     { path: '/models', label: t('models'), icon: BookOpen },
     { path: '/templates', label: t('templates'), icon: FileText },
     { path: '/logs', label: t('logs'), icon: FileText },
     { path: '/settings', label: t('settings'), icon: Settings },
   ]
+
+  // Get current page title from navItems
+  const currentNavItem = navItems.find(item => item.path === location.pathname)
+  const currentPageTitle = currentNavItem?.label || t('dashboard')
+
+  // Use ref to avoid stale closure in WebSocket callback
+  const instancesRef = useRef(instances)
+  instancesRef.current = instances
+  const tRef = useRef(t)
+  tRef.current = t
 
   const handleLogout = async () => {
     if (await confirm(t('confirmLogout'))) {
@@ -154,7 +161,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
         >
           {/* Title bar */}
           <div className="title-bar">
-            <span>Llama Remote - {t('dashboard')}</span>
+            <span>Llama Remote - {currentPageTitle}</span>
             <div className="title-bar-buttons">
               <div className="title-bar-btn" onClick={handleStopAll} title={t('stopAll')} style={{ fontSize: 10, padding: '2px 4px' }}>■</div>
               <div className="title-bar-btn" onClick={handleLogout} title={t('logout')}>X</div>

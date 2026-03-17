@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, HardDrive, Network, Lock, Globe } from 'lucide-react'
+import { Save, HardDrive, Network, Lock, Globe, MessageCircle } from 'lucide-react'
 import { useStore } from '../store'
 import { api } from '../hooks/api'
 import { useTranslation } from '../i18n/useTranslation'
@@ -16,6 +16,7 @@ export default function Settings() {
     models_dir: '',
     auth_enable: false,
     auth_password: '',
+    chat_enable: true,
   })
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -29,6 +30,7 @@ export default function Settings() {
         models_dir: config.paths.models_dir,
         auth_enable: config.auth?.enable || false,
         auth_password: '',
+        chat_enable: config.chat?.enable ?? true,
       })
     }
   }, [config])
@@ -97,6 +99,27 @@ export default function Settings() {
             />
             <span className="text-sm">{t('english')}</span>
           </label>
+        </div>
+      </div>
+
+      {/* Chat Settings */}
+      <div className="panel">
+        <h3 style={{ fontWeight: 'bold', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <MessageCircle size={14} />
+          {t('chatSettings') || 'Chat'}
+        </h3>
+        <div className="flex flex-col gap-4">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={formData.chat_enable}
+              onChange={e => setFormData({ ...formData, chat_enable: e.target.checked })}
+            />
+            <span className="text-sm">{t('enableChat') || 'Enable Chat page'}</span>
+          </label>
+          <p className="text-sm" style={{ color: 'var(--win-gray-dark)', marginTop: -4 }}>
+            {formData.chat_enable ? t('chatEnabled') || 'Chat page is accessible' : t('chatDisabled') || 'Chat page is hidden'}
+          </p>
         </div>
       </div>
 

@@ -180,6 +180,12 @@ export const zh = {
   chinese: '中文',
   english: 'English',
 
+  // Chat settings
+  chatSettings: '聊天设置',
+  enableChat: '启用聊天页面',
+  chatEnabled: '聊天页面可用',
+  chatDisabled: '聊天页面已隐藏',
+
   // Auth
   login: '登录',
   logout: '退出',
@@ -200,6 +206,25 @@ export const zh = {
   failed: '失败',
   error: '错误',
   warning: '警告',
+
+  // Chat
+  chat: '聊天',
+  chatTitle: 'AI 聊天',
+  chatSelectInstance: '选择实例...',
+  noRunningInstance: '没有运行中的实例',
+  selectInstanceHint: '请选择一个运行中的实例来开始聊天',
+  clearHistory: '清空历史',
+  sendMessage: '发送',
+  typeMessage: '输入消息...',
+  thinking: '思考中...',
+  tokensPerSecond: 'tokens/s',
+  copied: '已复制',
+  copyCode: '复制代码',
+  noMessages: '暂无消息',
+  startConversation: '开始一段对话吧',
+  connectionError: '连接错误',
+  tryAgain: '请重试',
+  sendFailed: '发送失败',
 }
 
 export const en = {
@@ -384,6 +409,12 @@ export const en = {
   chinese: '中文',
   english: 'English',
 
+  // Chat settings
+  chatSettings: 'Chat Settings',
+  enableChat: 'Enable Chat Page',
+  chatEnabled: 'Chat page is accessible',
+  chatDisabled: 'Chat page is hidden',
+
   // Auth
   login: 'Login',
   logout: 'Logout',
@@ -404,6 +435,25 @@ export const en = {
   failed: 'Failed',
   error: 'Error',
   warning: 'Warning',
+
+  // Chat
+  chat: 'Chat',
+  chatTitle: 'AI Chat',
+  chatSelectInstance: 'Select instance...',
+  noRunningInstance: 'No running instances',
+  selectInstanceHint: 'Select a running instance to start chatting',
+  clearHistory: 'Clear History',
+  sendMessage: 'Send',
+  typeMessage: 'Type a message...',
+  thinking: 'Thinking...',
+  tokensPerSecond: 'tokens/s',
+  copied: 'Copied',
+  copyCode: 'Copy code',
+  noMessages: 'No messages yet',
+  startConversation: 'Start a conversation',
+  connectionError: 'Connection error',
+  tryAgain: 'Please try again',
+  sendFailed: 'Send failed',
 }
 
 export type TranslationKey = keyof typeof zh

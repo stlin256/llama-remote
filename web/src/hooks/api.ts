@@ -98,6 +98,64 @@ export const api = {
 
   // Instance logs
   getInstanceLogs: (instanceId?: string) => request<any>(`/api/logs?instance=${instanceId || ''}`),
+
+  // Chat - send message to running instance
+  sendChatMessage: async function*(instanceId: string, messages: { role: string; content: string }[]): AsyncGenerator<{ content: string; done: boolean; tokens?: number }> {
+    const response = await fetch(`/api/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama',
+        messages,
+        stream: true,
+        instance_id: instanceId,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(error || `HTTP ${response.status}`)
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) throw new Error('No response body')
+
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let totalTokens = 0
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed || !trimmed.startsWith('data: ')) continue
+
+        const data = trimmed.slice(6)
+        if (data === '[DONE]') {
+          yield { content: '', done: true, tokens: totalTokens }
+          return
+        }
+
+        try {
+          const parsed = JSON.parse(data)
+          const content = parsed.choices?.[0]?.delta?.content || ''
+          const tokens = parsed.usage?.completion_tokens
+          if (tokens) totalTokens = tokens
+          if (content) {
+            yield { content, done: false, tokens: undefined }
+          }
+        } catch {
+          // Skip invalid JSON
+        }
+      }
+    }
+  },
 }
 
 // WebSocket连接

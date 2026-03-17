@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/ResponsiveLayout'
 import Dashboard from './pages/Dashboard'
+import Chat from './pages/Chat'
 import Instances from './pages/Instances'
 import Models from './pages/Models'
 import Templates from './pages/Templates'
@@ -70,6 +71,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/chat" element={<Chat />} />
         <Route path="/instances" element={<Instances />} />
         <Route path="/models" element={<Models />} />
         <Route path="/templates" element={<Templates />} />

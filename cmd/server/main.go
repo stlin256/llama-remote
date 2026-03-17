@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/llama-remote/server/pkg/auth"
+	"github.com/llama-remote/server/pkg/chat"
 	"github.com/llama-remote/server/pkg/config"
 	"github.com/llama-remote/server/pkg/gpu"
 	"github.com/llama-remote/server/pkg/instance"
@@ -75,6 +76,9 @@ func main() {
 
 	// 初始化认证管理器
 	authMgr := auth.NewManager(cfg)
+
+	// 初始化聊天管理器
+	chatMgr := chat.NewManager(instanceMgr)
 
 	// 启动GPU监控
 	gpuMonitor.Start()
@@ -142,6 +146,11 @@ func main() {
 
 	// 系统状态API
 	api.HandleFunc("/system", sysMonitor.HandleGet()).Methods("GET")
+
+	// 聊天API
+	api.HandleFunc("/chat", chatMgr.HandleChat()).Methods("POST")
+	api.HandleFunc("/chat/history", chatMgr.HandleHistory()).Methods("GET", "DELETE")
+	api.HandleFunc("/chat/models", chatMgr.HandleModels()).Methods("GET")
 
 	// 日志API
 
