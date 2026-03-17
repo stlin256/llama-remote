@@ -100,12 +100,11 @@ export const api = {
   getInstanceLogs: (instanceId?: string) => request<any>(`/api/logs?instance=${instanceId || ''}`),
 
   // Chat - send message to running instance
-  sendChatMessage: async function*(instanceId: string, messages: { role: string; content: string }[]): AsyncGenerator<{ content: string; done: boolean; tokens?: number }> {
-    const response = await fetch(`/api/v1/chat/completions`, {
+  sendChatMessage: async function*(instanceId: string, messages: { role: string; content: string }[]): AsyncGenerator<{ content: string; done: boolean; tokens?: number; promptTokens?: number }> {
+    const response = await fetch(`/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama',
         messages,
         stream: true,
         instance_id: instanceId,
@@ -123,6 +122,7 @@ export const api = {
     const decoder = new TextDecoder()
     let buffer = ''
     let totalTokens = 0
+    let promptTokens = 0
 
     while (true) {
       const { done, value } = await reader.read()
@@ -138,7 +138,7 @@ export const api = {
 
         const data = trimmed.slice(6)
         if (data === '[DONE]') {
-          yield { content: '', done: true, tokens: totalTokens }
+          yield { content: '', done: true, tokens: totalTokens, promptTokens }
           return
         }
 
@@ -146,9 +146,15 @@ export const api = {
           const parsed = JSON.parse(data)
           const content = parsed.choices?.[0]?.delta?.content || ''
           const tokens = parsed.usage?.completion_tokens
+          const pTokens = parsed.usage?.prompt_tokens
           if (tokens) totalTokens = tokens
+          if (pTokens) promptTokens = pTokens
+          // Always yield token count when available (at end of stream)
           if (content) {
-            yield { content, done: false, tokens: undefined }
+            yield { content, done: false, tokens: tokens || undefined, promptTokens: pTokens || undefined }
+          } else if (tokens || pTokens) {
+            // Yield empty content with token count when stream ends
+            yield { content: '', done: false, tokens: tokens || undefined, promptTokens: pTokens || undefined }
           }
         } catch {
           // Skip invalid JSON

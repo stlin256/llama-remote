@@ -195,9 +195,15 @@ func (m *Manager) handleStreamingChat(w http.ResponseWriter, r *http.Request, se
 	// Track tokens for speed calculation
 	startTime := time.Now()
 	totalTokens := 0
+	promptTokens := 0
 	var currentContent strings.Builder
 
+	// Increase scanner buffer for large responses
+	const maxScanTokenSize = 1024 * 1024 // 1MB
+	buf := make([]byte, maxScanTokenSize)
 	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(buf, maxScanTokenSize)
+
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -208,7 +214,7 @@ func (m *Manager) handleStreamingChat(w http.ResponseWriter, r *http.Request, se
 
 		data := strings.TrimPrefix(line, "data: ")
 		if data == "[DONE]" {
-			// Send final speed info
+			// Send final speed info with actual token counts
 			duration := time.Since(startTime)
 			tokensPerSecond := float64(totalTokens) / duration.Seconds()
 
@@ -217,6 +223,7 @@ func (m *Manager) handleStreamingChat(w http.ResponseWriter, r *http.Request, se
 				"choices":           []interface{}{},
 				"tokens_per_second": tokensPerSecond,
 				"total_tokens":      totalTokens,
+				"prompt_tokens":     promptTokens,
 				"duration_ms":       duration.Milliseconds(),
 			}
 			speedJSON, _ := json.Marshal(speedData)
@@ -230,16 +237,33 @@ func (m *Manager) handleStreamingChat(w http.ResponseWriter, r *http.Request, se
 			continue
 		}
 
-		// Count tokens (rough estimate: 1 token ≈ 4 chars)
-		if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
+		// Get actual token counts from chunk
+		if chunk.Usage.PromptTokens > 0 {
+			promptTokens = chunk.Usage.PromptTokens
+		}
+		if chunk.Usage.CompletionTokens > 0 {
+			totalTokens = chunk.Usage.CompletionTokens
+		} else if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
+			// Fallback: estimate if usage not provided
 			content := chunk.Choices[0].Delta.Content
 			currentContent.WriteString(content)
-			totalTokens += len(content) / 4
 		}
 
 		// Forward the chunk to client
 		fmt.Fprintf(w, "data: %s\n\n", data)
 		flusher.Flush()
+
+		// Check if client disconnected
+		select {
+		case <-r.Context().Done():
+			// Client disconnected, save partial response if any
+			m.addToHistory(instanceID, newMessages)
+			if currentContent.Len() > 0 {
+				m.addToHistory(instanceID, []Message{{Role: "assistant", Content: currentContent.String()}})
+			}
+			return
+		default:
+		}
 	}
 
 	// Save to history
