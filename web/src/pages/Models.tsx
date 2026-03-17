@@ -4,6 +4,7 @@ import { useStore } from '../store'
 import { api } from '../hooks/api'
 import { useTranslation } from '../i18n/useTranslation'
 import { useIsMobile } from '../hooks/useMediaQuery'
+import { formatSize } from '../utils'
 
 export default function Models() {
   const { models, setModels, config } = useStore()
@@ -32,17 +33,6 @@ export default function Models() {
   const filteredModels = models.filter(m =>
     m.name.toLowerCase().includes(search.toLowerCase())
   )
-
-  const formatSize = (bytes: number) => {
-    const units = ['B', 'KB', 'MB', 'GB', 'TB']
-    let size = bytes
-    let unitIndex = 0
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024
-      unitIndex++
-    }
-    return `${size.toFixed(1)} ${units[unitIndex]}`
-  }
 
   return (
     <div className="flex flex-col gap-4">
