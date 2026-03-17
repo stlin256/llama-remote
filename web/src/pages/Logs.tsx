@@ -3,10 +3,12 @@ import { ScrollText, Search, Trash2, Terminal } from 'lucide-react'
 import { useStore } from '../store'
 import { api } from '../hooks/api'
 import { useTranslation } from '../i18n/useTranslation'
+import { useIsMobile } from '../hooks/useMediaQuery'
 
 export default function Logs() {
   const { logs, clearLogs, instances } = useStore()
   const { t } = useTranslation()
+  const isMobile = useIsMobile()
   const [filter, setFilter] = useState('')
   const [levelFilter, setLevelFilter] = useState<string>('all')
   const [serverLogs, setServerLogs] = useState<string[]>([])
@@ -60,12 +62,12 @@ export default function Logs() {
 
   return (
     <div className="flex flex-col gap-4" style={{ height: '100%' }}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" style={{ flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? 8 : 0 }}>
         <h2 style={{ fontSize: 14, fontWeight: 'bold' }}>{t('logs')}</h2>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center" style={{ flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
           <select
             className="input"
-            style={{ width: 180 }}
+            style={{ width: isMobile ? '100%' : 180 }}
             value={selectedInstance}
             onChange={e => setSelectedInstance(e.target.value)}
           >
@@ -86,7 +88,7 @@ export default function Logs() {
       </div>
 
       {/* Search and filter */}
-      <div className="flex gap-4">
+      <div className="flex gap-4" style={{ flexDirection: isMobile ? 'column' : 'row' }}>
         <div style={{ position: 'relative', flex: 1 }}>
           <Search size={14} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--win-gray-dark)' }} />
           <input
@@ -100,7 +102,7 @@ export default function Logs() {
         </div>
         <select
           className="input"
-          style={{ width: 120 }}
+          style={{ width: isMobile ? '100%' : 120 }}
           value={levelFilter}
           onChange={e => setLevelFilter(e.target.value)}
         >

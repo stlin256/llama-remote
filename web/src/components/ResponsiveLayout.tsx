@@ -403,10 +403,10 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
         borderColor: 'var(--win-gray-dark) var(--win-white) var(--win-white) var(--win-gray-dark)',
         display: 'flex',
         justifyContent: 'space-around',
-        padding: '6px 4px',
+        padding: '4px 2px',
         zIndex: 100
       }}>
-        {navItems.slice(0, 5).map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon
           return (
             <NavLink
@@ -416,18 +416,21 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: 2,
-                padding: '4px 8px',
+                gap: 1,
+                padding: '2px 4px',
                 background: isActive ? 'var(--win-white)' : 'var(--win-gray)',
                 border: '2px solid',
                 borderColor: isActive ? 'var(--win-white) var(--win-black) var(--win-black) var(--win-white)' : 'var(--win-gray) var(--win-gray) var(--win-gray) var(--win-gray)',
                 color: isActive ? 'var(--win-blue)' : 'var(--win-black)',
                 textDecoration: 'none',
-                fontSize: 10
+                fontSize: 9,
+                minWidth: 48
               })}
             >
-              <Icon size={18} />
-              {item.label}
+              <Icon size={16} />
+              <span style={{ maxWidth: 48, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {item.label}
+              </span>
             </NavLink>
           )
         })}

@@ -7,6 +7,7 @@ import Modal from '../components/Modal'
 import { confirm } from '../components/ConfirmDialog'
 import { success, error } from '../components/MessageDialog'
 import { useTranslation } from '../i18n/useTranslation'
+import { useIsMobile } from '../hooks/useMediaQuery'
 
 const DEFAULT_PROMPT_CONTENT = `You are a very strong reasoner and planner. Use these critical instructions to structure your plans, thoughts, and responses.
 
@@ -55,6 +56,7 @@ Reasoning: high`
 export default function Templates() {
   const { prompts, setPrompts } = useStore()
   const { t } = useTranslation()
+  const isMobile = useIsMobile()
   const [showPromptModal, setShowPromptModal] = useState(false)
   const [promptForm, setPromptForm] = useState<Partial<PromptTemplate>>({
     name: '',
@@ -179,9 +181,12 @@ export default function Templates() {
             </div>
           </div>
         ) : (
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+          <div className="grid" style={{
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+            gap: isMobile ? 6 : 8
+          }}>
             {promptList.map((p) => (
-              <div key={p.name} className="panel" style={{ padding: 8 }}>
+              <div key={p.name} className="panel" style={{ padding: isMobile ? 6 : 8 }}>
                 <div className="flex items-center justify-between mb-2">
                   <span style={{ fontWeight: 'bold' }}>{p.name}</span>
                   <button
@@ -215,7 +220,7 @@ export default function Templates() {
       </div>
 
       {/* Prompt Modal */}
-      <Modal title={t('createTemplate')} show={showPromptModal} onClose={() => setShowPromptModal(false)} width={500}>
+      <Modal title={t('createTemplate')} show={showPromptModal} onClose={() => setShowPromptModal(false)} width={isMobile ? Math.min(window.innerWidth - 32, 400) : 500}>
         <div className="flex flex-col gap-4">
           <div>
             <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('templateName')}</label>

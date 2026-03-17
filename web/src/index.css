@@ -377,3 +377,32 @@ select.input {
 .mt-4 { margin-top: 16px; }
 .text-sm { font-size: 11px; }
 .font-bold { font-weight: bold; }
+
+/* Mobile responsive utilities */
+@media (max-width: 767px) {
+  .text-sm { font-size: 10px; }
+  .p-4 { padding: 8px; }
+  .gap-4 { gap: 8px; }
+  .mb-4 { margin-bottom: 8px; }
+  .mt-4 { margin-top: 8px; }
+}
+
+/* Mobile scrollable table container */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile touch-friendly buttons */
+@media (max-width: 767px) {
+  .btn {
+    padding: 6px 12px;
+    min-width: 60px;
+    font-size: 12px;
+  }
+
+  .input {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+}

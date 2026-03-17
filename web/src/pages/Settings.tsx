@@ -3,10 +3,12 @@ import { Save, HardDrive, Network, Lock, Globe } from 'lucide-react'
 import { useStore } from '../store'
 import { api } from '../hooks/api'
 import { useTranslation } from '../i18n/useTranslation'
+import { useIsMobile } from '../hooks/useMediaQuery'
 
 export default function Settings() {
   const { config, setConfig, setAuthenticated, language, setLanguage } = useStore()
   const { t } = useTranslation()
+  const isMobile = useIsMobile()
   const [formData, setFormData] = useState({
     host: '0.0.0.0',
     port: 8000,
@@ -103,7 +105,7 @@ export default function Settings() {
           <Network size={14} />
           {t('serverHost')}
         </h3>
-        <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+        <div className="grid" style={{ gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? 12 : 16 }}>
           <div>
             <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('serverHost')}</label>
             <input

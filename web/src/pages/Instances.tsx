@@ -7,6 +7,7 @@ import Modal from '../components/Modal'
 import { confirm } from '../components/ConfirmDialog'
 import { error as showError } from '../components/MessageDialog'
 import { useTranslation } from '../i18n/useTranslation'
+import { useIsMobile } from '../hooks/useMediaQuery'
 
 const DEFAULT_PARAMS = {
   ngl: 999,
@@ -63,6 +64,7 @@ Reasoning: high`
 export default function Instances() {
   const { instances, models, prompts, addInstance, updateInstance, removeInstance, instanceProgress, instanceErrors } = useStore()
   const { t } = useTranslation()
+  const isMobile = useIsMobile()
   const [showModal, setShowModal] = useState(false)
   const [editingInstance, setEditingInstance] = useState<Instance | null>(null)
   const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null)
@@ -256,8 +258,13 @@ export default function Instances() {
           </button>
         </div>
       ) : (
-        <div className="panel" style={{ padding: 0 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+        <div className="panel" style={{ padding: 0, overflowX: 'auto' }}>
+          <table style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            fontSize: isMobile ? 10 : 11,
+            minWidth: isMobile ? 600 : 'auto'
+          }}>
             <thead>
               <tr style={{ background: 'var(--win-gray)', textAlign: 'left' }}>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('name')}</th>
@@ -267,7 +274,7 @@ export default function Instances() {
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>Ctx</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>MM</th>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('status')}</th>
-                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)', width: 120 }}>{t('actions')}</th>
+                <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)', width: isMobile ? 100 : 120 }}>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -333,7 +340,7 @@ export default function Instances() {
       )}
 
       {/* Modal */}
-      <Modal title={editingInstance ? t('editInstance') : t('createInstance')} show={showModal} onClose={() => setShowModal(false)} width={500}>
+      <Modal title={editingInstance ? t('editInstance') : t('createInstance')} show={showModal} onClose={() => setShowModal(false)} width={isMobile ? Math.min(window.innerWidth - 32, 400) : 500}>
         <div className="flex flex-col gap-4">
           <div>
             <label className="text-sm" style={{ display: 'block', marginBottom: 4 }}>{t('instanceName')} *</label>
@@ -530,7 +537,10 @@ export default function Instances() {
 
           <div className="panel" style={{ marginTop: 8 }}>
             <h4 style={{ fontWeight: 'bold', marginBottom: 8 }}>{t('startupParams')}</h4>
-            <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            <div className="grid" style={{
+              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+              gap: isMobile ? 6 : 8
+            }}>
               <div>
                 <label className="text-sm" style={{ display: 'block', marginBottom: 2 }}>{t('gpuLayers')}</label>
                 <input

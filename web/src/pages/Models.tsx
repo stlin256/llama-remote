@@ -3,10 +3,12 @@ import { FolderOpen, RefreshCw, Search } from 'lucide-react'
 import { useStore } from '../store'
 import { api } from '../hooks/api'
 import { useTranslation } from '../i18n/useTranslation'
+import { useIsMobile } from '../hooks/useMediaQuery'
 
 export default function Models() {
   const { models, setModels, config } = useStore()
   const { t } = useTranslation()
+  const isMobile = useIsMobile()
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
 
@@ -63,7 +65,7 @@ export default function Models() {
         <input
           type="text"
           className="input"
-          style={{ paddingLeft: 28, width: 200 }}
+          style={{ paddingLeft: 28, width: isMobile ? '100%' : 200 }}
           placeholder={t('searchModels')}
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -76,8 +78,13 @@ export default function Models() {
           <p>{config?.paths.models_dir ? t('noModelsFound') : t('configureModels')}</p>
         </div>
       ) : (
-        <div className="panel" style={{ padding: 0 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+        <div className="panel" style={{ padding: 0, overflowX: 'auto' }}>
+          <table style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            fontSize: isMobile ? 10 : 11,
+            minWidth: isMobile ? 500 : 'auto'
+          }}>
             <thead>
               <tr style={{ background: 'var(--win-gray)', textAlign: 'left' }}>
                 <th style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>{t('modelName')}</th>
