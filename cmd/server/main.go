@@ -23,8 +23,8 @@ import (
 	"github.com/llama-remote/server/pkg/templates"
 	"github.com/llama-remote/server/pkg/websocket"
 
-	"github.com/gorilla/mux"
 	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 )
 
 //go:embed dist
@@ -149,6 +149,7 @@ func main() {
 
 	// 聊天API
 	api.HandleFunc("/chat", chatMgr.HandleChat()).Methods("POST")
+	api.HandleFunc("/completion", chatMgr.HandleCompletion()).Methods("POST")
 	api.HandleFunc("/chat/history", chatMgr.HandleHistory()).Methods("GET", "DELETE")
 	api.HandleFunc("/chat/models", chatMgr.HandleModels()).Methods("GET")
 

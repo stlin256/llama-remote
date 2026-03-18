@@ -52,6 +52,11 @@ function saveSessions(sessions: Record<string, ChatSession[]>) {
 function ThinkingBlock({ thinking }: { thinking: string }) {
   const [expanded, setExpanded] = useState(true)
 
+  // Skip if thinking content is too short (likely not real thinking)
+  if (!thinking || thinking.length < 5) {
+    return null
+  }
+
   return (
     <div style={{
       marginBottom: 8,
@@ -63,32 +68,36 @@ function ThinkingBlock({ thinking }: { thinking: string }) {
           display: 'flex',
           alignItems: 'center',
           gap: 6,
-          padding: '4px 8px',
+          padding: '6px 10px',
           fontSize: 11,
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
           border: 'none',
-          borderRadius: 4,
+          borderRadius: 6,
           cursor: 'pointer',
-          marginBottom: 4,
+          marginBottom: 6,
+          fontWeight: 500,
+          boxShadow: '0 2px 4px rgba(102, 126, 234, 0.3)',
         }}
       >
         {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        <Brain size={12} />
+        <Brain size={14} />
         <span>思考中</span>
+        <span style={{ opacity: 0.7, fontSize: 10 }}>({thinking.length} chars)</span>
       </button>
       {expanded && (
         <div style={{
-          padding: '8px 12px',
-          background: 'rgba(102, 126, 234, 0.1)',
-          border: '1px solid rgba(102, 126, 234, 0.3)',
-          borderRadius: 4,
+          padding: '12px 16px',
+          background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%)',
+          border: '1px solid rgba(102, 126, 234, 0.25)',
+          borderRadius: 8,
           fontSize: 12,
-          color: '#333',
+          color: '#1a1a2e',
           whiteSpace: 'pre-wrap',
-          lineHeight: 1.5,
-          maxHeight: 200,
+          lineHeight: 1.6,
+          maxHeight: 300,
           overflow: 'auto',
+          fontFamily: 'monospace',
         }}>
           {thinking}
         </div>
@@ -114,6 +123,40 @@ export default function Chat() {
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+
+  // Settings for generation
+  const [chatMode, setChatMode] = useState<'chat' | 'completion'>('chat')
+  const [params, setParams] = useState(() => {
+    const saved = localStorage.getItem('llama-remote-chat-params')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        // Reset 400 to -1 (infinite) for users who cached the old default
+        if (parsed.n_predict === 400) {
+          parsed.n_predict = -1
+        }
+        return parsed
+      } catch (e) {
+        // ignore parse error
+      }
+    }
+    return {
+      temperature: 0.7,
+      top_k: 40,
+      top_p: 0.95,
+      repeat_penalty: 1.18,
+      n_predict: -1,
+      grammar: '',
+      n_probs: 0
+    }
+  })
+
+  // Autosave params
+  useEffect(() => {
+    localStorage.setItem('llama-remote-chat-params', JSON.stringify(params))
+  }, [params])
+
+  const [showSettings, setShowSettings] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -397,7 +440,14 @@ export default function Chat() {
     let promptTokenCount = 0
 
     try {
-      for await (const chunk of api.sendChatMessage(selectedInstanceId, conversationHistory)) {
+      const fullPrompt = chatMode === 'completion'
+        ? conversationHistory.map(m => m.content).join('\n\n')
+        : '';
+      const generator = chatMode === 'completion'
+        ? api.sendCompletion(selectedInstanceId, fullPrompt, params)
+        : api.sendChatMessage(selectedInstanceId, conversationHistory, params);
+
+      for await (const chunk of generator) {
         if (chunk.done) {
           // Use accurate token count from API
           if (chunk.tokens) {
@@ -516,18 +566,39 @@ export default function Chat() {
   // Get current instance sessions
   const currentInstanceSessions = sessions[selectedInstanceId] || []
 
-  // Extract thinking/reasoning content (from <<<reasoning_content_start>>> to <<<reasoning_content_end>>>)
+  // Extract thinking/reasoning content - support multiple tag formats and streaming (unclosed tags)
   const extractThinking = (content: string): { thinking: string | null, content: string } => {
-    const thinkingStart = '<<<reasoning_content_start>>>'
-    const thinkingEnd = '<<<reasoning_content_end>>>'
-    const startIdx = content.indexOf(thinkingStart)
-    const endIdx = content.indexOf(thinkingEnd)
+    // Try different tag formats
+    const tagVariants = [
+      { start: '<<<reasoning_content_start>>>', end: '<<<reasoning_content_end>>>' },
+      { start: '<<<reasoning>>>', end: '<<<reasoning>>>' },
+      { start: '<thinking>', end: '</thinking>' },
+      { start: '<think>', end: '</think>' },
+    ]
 
-    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-      const thinking = content.substring(startIdx + thinkingStart.length, endIdx).trim()
-      const newContent = content.substring(0, startIdx) + content.substring(endIdx + thinkingEnd.length)
-      return { thinking, content: newContent.trim() }
+    for (const { start, end } of tagVariants) {
+      const startIdx = content.indexOf(start)
+      
+      if (startIdx !== -1) {
+        const endIdx = content.indexOf(end, startIdx + start.length)
+        if (endIdx !== -1) {
+          // Closed tag
+          const thinking = content.substring(startIdx + start.length, endIdx).trim()
+          const newContent = content.substring(0, startIdx) + content.substring(endIdx + end.length)
+          if (thinking) {
+            return { thinking, content: newContent.trim() }
+          }
+        } else {
+          // Unclosed tag (streaming)
+          const thinking = content.substring(startIdx + start.length).trim()
+          const newContent = content.substring(0, startIdx)
+          if (thinking) {
+            return { thinking, content: newContent.trim() }
+          }
+        }
+      }
     }
+
     return { thinking: null, content }
   }
 
@@ -665,9 +736,91 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col" style={{ height: '100%', minHeight: 0 }}>
-      {/* Header with instance selector and session controls */}
-      <div className="flex items-center gap-2" style={{ flexWrap: 'wrap', marginBottom: 8 }}>
+    <div className="flex" style={{ height: '100%', minHeight: 0, gap: 8, flexDirection: isMobile ? 'column' : 'row' }}>
+      {/* Left panel: Settings */}
+      {showSettings && (
+        <div className="panel" style={{ width: isMobile ? '100%' : '300px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+          <div style={{ fontWeight: 'bold', marginBottom: 8, paddingBottom: 4, borderBottom: '2px solid var(--win-gray-dark)' }}>
+            {t('generationSettings')}
+          </div>
+          
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: 'block', marginBottom: 4 }}>{t('chatMode')}:</label>
+            <select className="input" style={{ width: '100%' }} value={chatMode} onChange={e => setChatMode(e.target.value as 'chat' | 'completion')}>
+              <option value="chat">{t('modeChat')}</option>
+              <option value="completion">{t('modeCompletion')}</option>
+            </select>
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>{t('temperature')}</span>
+              <span>{params.temperature}</span>
+            </label>
+            <input type="range" className="input" min="0" max="2" step="0.01" value={params.temperature} onChange={e => setParams({...params, temperature: parseFloat(e.target.value)})} style={{ width: '100%', padding: 0 }} />
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>{t('topK')}</span>
+              <span>{params.top_k}</span>
+            </label>
+            <input type="range" className="input" min="-1" max="100" step="1" value={params.top_k} onChange={e => setParams({...params, top_k: parseInt(e.target.value)})} style={{ width: '100%', padding: 0 }} />
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>{t('topP')}</span>
+              <span>{params.top_p}</span>
+            </label>
+            <input type="range" className="input" min="0" max="1" step="0.01" value={params.top_p} onChange={e => setParams({...params, top_p: parseFloat(e.target.value)})} style={{ width: '100%', padding: 0 }} />
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>{t('repeatPenalty')}</span>
+              <span>{params.repeat_penalty}</span>
+            </label>
+            <input type="range" className="input" min="0" max="2" step="0.01" value={params.repeat_penalty} onChange={e => setParams({...params, repeat_penalty: parseFloat(e.target.value)})} style={{ width: '100%', padding: 0 }} />
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>{t('predictions')}</span>
+              <span>{params.n_predict}</span>
+            </label>
+            <input type="range" className="input" min="-1" max="2048" step="1" value={params.n_predict} onChange={e => setParams({...params, n_predict: parseInt(e.target.value)})} style={{ width: '100%', padding: 0 }} />
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>{t('showProbabilities')}</span>
+              <span>{params.n_probs}</span>
+            </label>
+            <input type="range" className="input" min="0" max="10" step="1" value={params.n_probs || 0} onChange={e => setParams({...params, n_probs: parseInt(e.target.value)})} style={{ width: '100%', padding: 0 }} />
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ display: 'block', marginBottom: 4 }}>{t('grammarGBNF')}</label>
+            <textarea 
+              className="input" 
+              style={{ width: '100%', height: 80, resize: 'vertical' }} 
+              placeholder="e.g. root ::= [a-z]+"
+              value={params.grammar}
+              onChange={e => setParams({...params, grammar: e.target.value})}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Right panel: Chat area */}
+      <div className="flex flex-col" style={{ flex: 1, height: '100%', minHeight: 0 }}>
+        {/* Header with instance selector and session controls */}
+        <div className="flex items-center gap-2" style={{ flexWrap: 'wrap', marginBottom: 8 }}>
+          <button onClick={() => setShowSettings(!showSettings)} className={`btn ${showSettings ? 'active' : ''}`} style={{ fontWeight: 'bold' }}>
+            {showSettings ? t('hideSettings') : t('showSettings')}
+          </button>
+
         {/* Instance selector */}
         <select
           className="input"
@@ -977,6 +1130,7 @@ export default function Chat() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

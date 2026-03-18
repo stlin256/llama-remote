@@ -225,6 +225,19 @@ export const zh = {
   connectionError: '连接错误',
   tryAgain: '请重试',
   sendFailed: '发送失败',
+  generationSettings: '生成设置',
+  chatMode: '模式',
+  modeChat: '对话 (Chat)',
+  modeCompletion: '续写 (Completion)',
+  temperature: '随机性 (Temperature)',
+  topK: 'Top K',
+  topP: 'Top P',
+  repeatPenalty: '重复惩罚 (Repeat Penalty)',
+  predictions: '最大Token数 (Predictions)',
+  showProbabilities: '显示概率 (Show Probabilities)',
+  grammarGBNF: '语法约束 (Grammar GBNF)',
+  hideSettings: '隐藏设置',
+  showSettings: '显示设置',
 }
 
 export const en = {
@@ -454,6 +467,19 @@ export const en = {
   connectionError: 'Connection error',
   tryAgain: 'Please try again',
   sendFailed: 'Send failed',
+  generationSettings: 'Generation Settings',
+  chatMode: 'Mode',
+  modeChat: 'Chat',
+  modeCompletion: 'Completion',
+  temperature: 'Temperature',
+  topK: 'Top K',
+  topP: 'Top P',
+  repeatPenalty: 'Repeat Penalty',
+  predictions: 'Predictions',
+  showProbabilities: 'Show Probabilities',
+  grammarGBNF: 'Grammar (GBNF)',
+  hideSettings: 'Hide Settings',
+  showSettings: 'Show Settings',
 }
 
 export type TranslationKey = keyof typeof zh

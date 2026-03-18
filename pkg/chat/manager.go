@@ -29,9 +29,11 @@ type Message struct {
 
 // ChatRequest represents a chat API request
 type ChatRequest struct {
-	Messages    []Message `json:"messages"`
-	InstanceID  string    `json:"instance_id"`
-	Stream      bool      `json:"stream"`
+	Messages   []Message              `json:"messages,omitempty"`
+	Prompt     string                 `json:"prompt,omitempty"` // For completion mode
+	InstanceID string                 `json:"instance_id"`
+	Stream     bool                   `json:"stream"`
+	Params     map[string]interface{} `json:"params,omitempty"` // Advanced parameters
 }
 
 // ChatResponse represents a chat API response
@@ -57,13 +59,13 @@ type Usage struct {
 
 // StreamChunk represents a streaming response chunk
 type StreamChunk struct {
-	ID      string   `json:"id"`
-	Created int64    `json:"created"`
-	Model   string   `json:"model"`
+	ID      string `json:"id"`
+	Created int64  `json:"created"`
+	Model   string `json:"model"`
 	Choices []struct {
-		Index        int         `json:"index"`
-		Delta        Message     `json:"delta"`
-		FinishReason string      `json:"finish_reason"`
+		Index        int     `json:"index"`
+		Delta        Message `json:"delta"`
+		FinishReason string  `json:"finish_reason"`
 	} `json:"choices"`
 	Usage struct {
 		PromptTokens     int `json:"prompt_tokens"`
@@ -142,10 +144,80 @@ func (m *Manager) HandleChat() http.HandlerFunc {
 			"stream":   req.Stream,
 		}
 
+		// Add advanced parameters
+		if req.Params != nil {
+			for k, v := range req.Params {
+				llamaReq[k] = v
+			}
+		}
+
 		if req.Stream {
 			m.handleStreamingChat(w, r, serverURL, llamaReq, req.InstanceID, req.Messages)
 		} else {
 			m.handleNonStreamingChat(w, r, serverURL, llamaReq, req.InstanceID, req.Messages)
+		}
+	}
+}
+
+// HandleCompletion handles POST /api/completion
+func (m *Manager) HandleCompletion() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req ChatRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, fmt.Sprintf("invalid request body: %v", err), 400)
+			return
+		}
+
+		// Validate instance_id
+		if req.InstanceID == "" {
+			http.Error(w, "instance_id is required", 400)
+			return
+		}
+
+		// Get instance
+		inst, ok := m.instanceMgr.Get(req.InstanceID)
+		if !ok {
+			http.Error(w, "instance not found", 404)
+			return
+		}
+
+		// Check if instance is running
+		if inst.Status != "running" {
+			http.Error(w, "instance is not running", 400)
+			return
+		}
+
+		// Get port
+		port := inst.Port
+		if port <= 0 {
+			if p, ok := inst.Params["port"].(float64); ok {
+				port = int(p)
+			}
+		}
+		if port <= 0 {
+			port = 5000
+		}
+
+		// Build llama-server URL for completions
+		serverURL := fmt.Sprintf("http://127.0.0.1:%d/v1/completions", port)
+
+		// Prepare request to llama-server
+		llamaReq := map[string]interface{}{
+			"prompt": req.Prompt,
+			"stream": req.Stream,
+		}
+
+		// Add advanced parameters
+		if req.Params != nil {
+			for k, v := range req.Params {
+				llamaReq[k] = v
+			}
+		}
+
+		if req.Stream {
+			m.handleStreamingChat(w, r, serverURL, llamaReq, req.InstanceID, nil)
+		} else {
+			m.handleNonStreamingChat(w, r, serverURL, llamaReq, req.InstanceID, nil)
 		}
 	}
 }
@@ -333,8 +405,8 @@ func (m *Manager) handleNonStreamingChat(w http.ResponseWriter, r *http.Request,
 
 	// Combine response with speed info
 	result := map[string]interface{}{
-		"response":  chatResp,
-		"speed":     speedInfo,
+		"response": chatResp,
+		"speed":    speedInfo,
 	}
 
 	// Save to history
@@ -387,11 +459,11 @@ func (m *Manager) HandleModels() http.HandlerFunc {
 		instances := m.instanceMgr.List()
 
 		type ModelInfo struct {
-			InstanceID string `json:"instance_id"`
+			InstanceID   string `json:"instance_id"`
 			InstanceName string `json:"instance_name"`
-			Model       string `json:"model"`
-			Status      string `json:"status"`
-			Port        int    `json:"port"`
+			Model        string `json:"model"`
+			Status       string `json:"status"`
+			Port         int    `json:"port"`
 		}
 
 		var models []ModelInfo

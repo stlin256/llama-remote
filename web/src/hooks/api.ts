@@ -100,7 +100,7 @@ export const api = {
   getInstanceLogs: (instanceId?: string) => request<any>(`/api/logs?instance=${instanceId || ''}`),
 
   // Chat - send message to running instance
-  sendChatMessage: async function*(instanceId: string, messages: { role: string; content: string }[]): AsyncGenerator<{ content: string; done: boolean; tokens?: number; promptTokens?: number }> {
+  sendChatMessage: async function*(instanceId: string, messages: { role: string; content: string }[], params?: any): AsyncGenerator<{ content: string; done: boolean; tokens?: number; promptTokens?: number }> {
     const response = await fetch(`/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -108,6 +108,7 @@ export const api = {
         messages,
         stream: true,
         instance_id: instanceId,
+        params,
       }),
     })
 
@@ -154,6 +155,71 @@ export const api = {
             yield { content, done: false, tokens: tokens || undefined, promptTokens: pTokens || undefined }
           } else if (tokens || pTokens) {
             // Yield empty content with token count when stream ends
+            yield { content: '', done: false, tokens: tokens || undefined, promptTokens: pTokens || undefined }
+          }
+        } catch {
+          // Skip invalid JSON
+        }
+      }
+    }
+  },
+
+  // Completion - send raw prompt to running instance
+  sendCompletion: async function*(instanceId: string, prompt: string, params?: any): AsyncGenerator<{ content: string; done: boolean; tokens?: number; promptTokens?: number }> {
+    const response = await fetch(`/api/completion`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        stream: true,
+        instance_id: instanceId,
+        params,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(error || `HTTP ${response.status}`)
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) throw new Error('No response body')
+
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let totalTokens = 0
+    let promptTokens = 0
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed || !trimmed.startsWith('data: ')) continue
+
+        const data = trimmed.slice(6)
+        if (data === '[DONE]') {
+          yield { content: '', done: true, tokens: totalTokens, promptTokens }
+          return
+        }
+
+        try {
+          const parsed = JSON.parse(data)
+          // For completions, the text is in choices[0].text
+          const content = parsed.choices?.[0]?.text || ''
+          const tokens = parsed.usage?.completion_tokens
+          const pTokens = parsed.usage?.prompt_tokens
+          if (tokens) totalTokens = tokens
+          if (pTokens) promptTokens = pTokens
+          
+          if (content) {
+            yield { content, done: false, tokens: tokens || undefined, promptTokens: pTokens || undefined }
+          } else if (tokens || pTokens) {
             yield { content: '', done: false, tokens: tokens || undefined, promptTokens: pTokens || undefined }
           }
         } catch {
