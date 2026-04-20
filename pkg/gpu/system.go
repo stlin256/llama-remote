@@ -3,7 +3,7 @@ package gpu
 import (
 	"encoding/json"
 	"net/http"
-	"os/exec"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -11,17 +11,20 @@ import (
 )
 
 type SystemStats struct {
-	CPU float64 `json:"cpu"`     // %
-	MemUsed  float64 `json:"mem_used"`  // GB
-	MemTotal float64 `json:"mem_total"` // GB
+	CPU        float64 `json:"cpu"`         // %
+	MemUsed    float64 `json:"mem_used"`    // GB
+	MemTotal   float64 `json:"mem_total"`   // GB
 	MemPercent float64 `json:"mem_percent"` // %
 }
 
 type MonitorEx struct {
-	stats    SystemStats
-	mu       sync.RWMutex
-	statsCh  chan SystemStats
-	stopCh   chan struct{}
+	stats        SystemStats
+	mu           sync.RWMutex
+	statsCh      chan SystemStats
+	stopCh       chan struct{}
+	prevIdle     uint64
+	prevTotal    uint64
+	prevCPUValid bool
 }
 
 func NewMonitorEx() *MonitorEx {
@@ -74,31 +77,105 @@ func (m *MonitorEx) poll() {
 func (m *MonitorEx) querySystem() SystemStats {
 	stats := SystemStats{}
 
-	// Get CPU usage
-	cmd := exec.Command("sh", "-c", "top -bn1 | grep 'Cpu(s)' | sed 's/.*, *\\([0-9.]*\\)%* id.*/\\1/' | awk '{print 100 - $1}'")
-	output, err := cmd.Output()
+	totalCPU, idleCPU, err := readCPUSample()
 	if err == nil {
-		cpu, _ := strconv.ParseFloat(strings.TrimSpace(string(output)), 64)
-		stats.CPU = cpu
+		if m.prevCPUValid && totalCPU > m.prevTotal && idleCPU >= m.prevIdle {
+			deltaTotal := totalCPU - m.prevTotal
+			deltaIdle := idleCPU - m.prevIdle
+			if deltaTotal > 0 {
+				stats.CPU = float64(deltaTotal-deltaIdle) * 100 / float64(deltaTotal)
+			}
+		}
+		m.prevTotal = totalCPU
+		m.prevIdle = idleCPU
+		m.prevCPUValid = true
 	}
 
-	// Get memory usage
-	cmd = exec.Command("sh", "-c", "free -g | grep Mem | awk '{print $2,$3}'")
-	output, err = cmd.Output()
-	if err == nil {
-		parts := strings.Fields(strings.TrimSpace(string(output)))
-		if len(parts) >= 2 {
-			total, _ := strconv.ParseFloat(parts[0], 64)
-			used, _ := strconv.ParseFloat(parts[1], 64)
-			stats.MemTotal = total
-			stats.MemUsed = used
-			if total > 0 {
-				stats.MemPercent = (used / total) * 100
+	memTotalKB, memAvailableKB, err := readMemInfo()
+	if err == nil && memTotalKB > 0 {
+		memUsedKB := memTotalKB - memAvailableKB
+		stats.MemTotal = float64(memTotalKB) / 1024 / 1024
+		stats.MemUsed = float64(memUsedKB) / 1024 / 1024
+		stats.MemPercent = float64(memUsedKB) * 100 / float64(memTotalKB)
+	}
+
+	return stats
+}
+
+func readCPUSample() (uint64, uint64, error) {
+	data, err := os.ReadFile("/proc/stat")
+	if err != nil {
+		return 0, 0, err
+	}
+
+	lines := strings.Split(string(data), "\n")
+	if len(lines) == 0 {
+		return 0, 0, os.ErrInvalid
+	}
+
+	fields := strings.Fields(lines[0])
+	if len(fields) < 5 || fields[0] != "cpu" {
+		return 0, 0, os.ErrInvalid
+	}
+
+	var total uint64
+	for _, field := range fields[1:] {
+		value, convErr := strconv.ParseUint(field, 10, 64)
+		if convErr != nil {
+			return 0, 0, convErr
+		}
+		total += value
+	}
+
+	idle, err := strconv.ParseUint(fields[4], 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+	if len(fields) > 5 {
+		iowait, convErr := strconv.ParseUint(fields[5], 10, 64)
+		if convErr != nil {
+			return 0, 0, convErr
+		}
+		idle += iowait
+	}
+
+	return total, idle, nil
+}
+
+func readMemInfo() (uint64, uint64, error) {
+	data, err := os.ReadFile("/proc/meminfo")
+	if err != nil {
+		return 0, 0, err
+	}
+
+	var totalKB uint64
+	var availableKB uint64
+
+	for _, line := range strings.Split(string(data), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+
+		switch strings.TrimSuffix(fields[0], ":") {
+		case "MemTotal":
+			totalKB, err = strconv.ParseUint(fields[1], 10, 64)
+			if err != nil {
+				return 0, 0, err
+			}
+		case "MemAvailable":
+			availableKB, err = strconv.ParseUint(fields[1], 10, 64)
+			if err != nil {
+				return 0, 0, err
 			}
 		}
 	}
 
-	return stats
+	if totalKB == 0 {
+		return 0, 0, os.ErrInvalid
+	}
+
+	return totalKB, availableKB, nil
 }
 
 func (m *MonitorEx) HandleGet() http.HandlerFunc {

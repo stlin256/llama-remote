@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -147,8 +148,20 @@ func (m *Manager) Update(inst *Instance) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if _, ok := m.instances[inst.ID]; !ok {
+	existing, ok := m.instances[inst.ID]
+	if !ok {
 		return fmt.Errorf("instance not found")
+	}
+
+	// Preserve runtime-only fields so editing a running instance does not lose
+	// the active process handle and log association.
+	inst.PID = existing.PID
+	inst.LogFile = existing.LogFile
+	if inst.Status == "" {
+		inst.Status = existing.Status
+	}
+	if inst.Port == 0 {
+		inst.Port = existing.Port
 	}
 
 	m.instances[inst.ID] = inst
@@ -344,25 +357,45 @@ func (m *Manager) StopAll() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// First kill all tracked instances
+	binaryName := "llama-server"
+	if m.cfg.Paths.LlamaBin != "" {
+		binaryName = filepath.Base(m.cfg.Paths.LlamaBin)
+	}
+
+	// First kill all tracked instances.
 	for _, inst := range m.instances {
 		if inst.PID > 0 {
 			log.Printf("StopAll: killing PID %d (%s)", inst.PID, inst.Name)
-			cmd := exec.Command("kill", "-9", fmt.Sprintf("%d", inst.PID))
-			output, err := cmd.CombinedOutput()
+			err := killPID(inst.PID)
 			if err != nil {
-				log.Printf("StopAll: kill failed: %v, output: %s", err, string(output))
+				log.Printf("StopAll: kill failed for PID %d: %v", inst.PID, err)
 			}
 			inst.Status = "stopped"
 			inst.PID = 0
 		}
 	}
 
-	// Also kill any llama-server processes not in our list
-	log.Printf("StopAll: scanning for orphaned llama-server processes")
-	cmd := exec.Command("bash", "-c", "pkill -9 llama-server || true")
-	output, err := cmd.CombinedOutput()
-	log.Printf("StopAll: pkill output: %s, err: %v", string(output), err)
+	// Also kill any orphaned llama-server processes left outside our tracked
+	// instance list. We avoid shell wrappers here so the Linux path is explicit
+	// and easier to reason about.
+	log.Printf("StopAll: scanning for orphaned %s processes", binaryName)
+	output, err := exec.Command("pgrep", "-x", binaryName).Output()
+	if err == nil {
+		for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+			if line == "" {
+				continue
+			}
+			pid, convErr := strconv.Atoi(strings.TrimSpace(line))
+			if convErr != nil || pid <= 0 {
+				continue
+			}
+			if killErr := killPID(pid); killErr != nil {
+				log.Printf("StopAll: failed to kill orphan PID %d: %v", pid, killErr)
+			}
+		}
+	} else {
+		log.Printf("StopAll: pgrep returned: %v", err)
+	}
 
 	m.saveInstances()
 }
@@ -611,4 +644,12 @@ func extractErrorMessage(logContent string) string {
 		return lines[len(lines)-1]
 	}
 	return ""
+}
+
+func killPID(pid int) error {
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	return proc.Kill()
 }

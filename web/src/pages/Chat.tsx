@@ -481,26 +481,24 @@ export default function Chat() {
         ? Math.round(tokenCount / elapsedSeconds)
         : undefined
 
-      const finalMessages = newMessages.map(m =>
-        m.id === assistantMessageId
-          ? { ...m, content: fullContent, tokensPerSecond, totalTokens: tokenCount, promptTokens: promptTokenCount }
-          : m
-      )
+      const assistantMsg: ChatMessage = {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: fullContent,
+        timestamp: Date.now(),
+        tokensPerSecond,
+        totalTokens: tokenCount,
+        promptTokens: promptTokenCount,
+      }
 
-      setMessages(finalMessages)
+      setMessages(prev => prev.map(m =>
+        m.id === assistantMessageId
+          ? assistantMsg
+          : m
+      ))
 
       // Save to localStorage with assistant response
       if (selectedInstanceId) {
-        const assistantMsg: ChatMessage = {
-          id: assistantMessageId,
-          role: 'assistant',
-          content: fullContent,
-          timestamp: Date.now(),
-          tokensPerSecond,
-          totalTokens: tokenCount,
-          promptTokens: promptTokenCount,
-        }
-
         setSessions(prev => {
           const instanceSessions = prev[selectedInstanceId] || []
           let updatedSessions: ChatSession[]

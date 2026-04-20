@@ -11,9 +11,9 @@ type ConfigResponse struct {
 		Port int    `json:"port"`
 	} `json:"server"`
 	Paths struct {
-		LlamaBin   string `json:"llama_bin"`
-		ModelsDir  string `json:"models_dir"`
-		LogDir     string `json:"log_dir"`
+		LlamaBin  string `json:"llama_bin"`
+		ModelsDir string `json:"models_dir"`
+		LogDir    string `json:"log_dir"`
 	} `json:"paths"`
 	Auth struct {
 		Enable bool `json:"enable"`
@@ -41,11 +41,11 @@ type UpdateRequest struct {
 		Port int    `json:"port"`
 	} `json:"server"`
 	Paths struct {
-		LlamaBin   string `json:"llama_bin"`
-		ModelsDir  string `json:"models_dir"`
+		LlamaBin  string `json:"llama_bin"`
+		ModelsDir string `json:"models_dir"`
 	} `json:"paths"`
 	Auth struct {
-		Enable   bool   `json:"enable"`
+		Enable   *bool  `json:"enable"`
 		Password string `json:"password"`
 	} `json:"auth"`
 }
@@ -70,8 +70,8 @@ func HandleUpdate(cfg *Config) http.HandlerFunc {
 		if req.Paths.ModelsDir != "" {
 			cfg.Paths.ModelsDir = req.Paths.ModelsDir
 		}
-		if req.Auth.Enable {
-			cfg.Auth.Enable = req.Auth.Enable
+		if req.Auth.Enable != nil {
+			cfg.Auth.Enable = *req.Auth.Enable
 		}
 		if req.Auth.Password != "" {
 			cfg.Auth.Password = req.Auth.Password

@@ -134,13 +134,9 @@ func (m *Manager) HandleChat() http.HandlerFunc {
 		// Build llama-server URL
 		serverURL := fmt.Sprintf("http://127.0.0.1:%d/v1/chat/completions", port)
 
-		// Add conversation history to messages
-		allMessages := m.getHistory(req.InstanceID)
-		allMessages = append(allMessages, req.Messages...)
-
 		// Prepare request to llama-server
 		llamaReq := map[string]interface{}{
-			"messages": allMessages,
+			"messages": req.Messages,
 			"stream":   req.Stream,
 		}
 
@@ -315,10 +311,9 @@ func (m *Manager) handleStreamingChat(w http.ResponseWriter, r *http.Request, se
 		}
 		if chunk.Usage.CompletionTokens > 0 {
 			totalTokens = chunk.Usage.CompletionTokens
-		} else if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
-			// Fallback: estimate if usage not provided
-			content := chunk.Choices[0].Delta.Content
-			currentContent.WriteString(content)
+		}
+		if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
+			currentContent.WriteString(chunk.Choices[0].Delta.Content)
 		}
 
 		// Forward the chunk to client
@@ -328,19 +323,26 @@ func (m *Manager) handleStreamingChat(w http.ResponseWriter, r *http.Request, se
 		// Check if client disconnected
 		select {
 		case <-r.Context().Done():
-			// Client disconnected, save partial response if any
-			m.addToHistory(instanceID, newMessages)
-			if currentContent.Len() > 0 {
-				m.addToHistory(instanceID, []Message{{Role: "assistant", Content: currentContent.String()}})
+			// Client disconnected, save partial response if any.
+			if newMessages != nil {
+				transcript := append(append([]Message{}, newMessages...), Message{
+					Role:    "assistant",
+					Content: currentContent.String(),
+				})
+				m.setHistory(instanceID, transcript)
 			}
 			return
 		default:
 		}
 	}
 
-	// Save to history
-	m.addToHistory(instanceID, newMessages)
-	m.addToHistory(instanceID, []Message{{Role: "assistant", Content: currentContent.String()}})
+	if newMessages != nil {
+		transcript := append(append([]Message{}, newMessages...), Message{
+			Role:    "assistant",
+			Content: currentContent.String(),
+		})
+		m.setHistory(instanceID, transcript)
+	}
 }
 
 func (m *Manager) handleNonStreamingChat(w http.ResponseWriter, r *http.Request, serverURL string, llamaReq map[string]interface{}, instanceID string, newMessages []Message) {
@@ -409,10 +411,10 @@ func (m *Manager) handleNonStreamingChat(w http.ResponseWriter, r *http.Request,
 		"speed":    speedInfo,
 	}
 
-	// Save to history
-	if len(chatResp.Choices) > 0 {
-		m.addToHistory(instanceID, newMessages)
-		m.addToHistory(instanceID, []Message{chatResp.Choices[0].Message})
+	// Save the full transcript without duplicating prior turns.
+	if len(chatResp.Choices) > 0 && newMessages != nil {
+		transcript := append(append([]Message{}, newMessages...), chatResp.Choices[0].Message)
+		m.setHistory(instanceID, transcript)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -487,27 +489,16 @@ func (m *Manager) HandleModels() http.HandlerFunc {
 	}
 }
 
-func (m *Manager) getHistory(instanceID string) []Message {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	history := m.history[instanceID]
-	// Return a copy to prevent mutation
-	result := make([]Message, len(history))
-	copy(result, history)
-	return result
-}
-
-func (m *Manager) addToHistory(instanceID string, messages []Message) {
+func (m *Manager) setHistory(instanceID string, messages []Message) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.history[instanceID] == nil {
-		m.history[instanceID] = []Message{}
-	}
-	m.history[instanceID] = append(m.history[instanceID], messages...)
+	history := append([]Message{}, messages...)
 
 	// Limit history to 100 messages (50 pairs)
-	if len(m.history[instanceID]) > 100 {
-		m.history[instanceID] = m.history[instanceID][len(m.history[instanceID])-100:]
+	if len(history) > 100 {
+		history = history[len(history)-100:]
 	}
+
+	m.history[instanceID] = history
 }
