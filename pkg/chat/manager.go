@@ -23,8 +23,9 @@ type Manager struct {
 
 // Message represents a chat message
 type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role             string      `json:"role"`
+	Content          interface{} `json:"content"`
+	ReasoningContent string      `json:"reasoning_content,omitempty"`
 }
 
 // ChatRequest represents a chat API request
@@ -48,6 +49,7 @@ type ChatResponse struct {
 type Choice struct {
 	Index        int     `json:"index"`
 	Message      Message `json:"message"`
+	Text         string  `json:"text,omitempty"`
 	FinishReason string  `json:"finish_reason"`
 }
 
@@ -65,6 +67,7 @@ type StreamChunk struct {
 	Choices []struct {
 		Index        int     `json:"index"`
 		Delta        Message `json:"delta"`
+		Text         string  `json:"text,omitempty"`
 		FinishReason string  `json:"finish_reason"`
 	} `json:"choices"`
 	Usage struct {
@@ -72,6 +75,10 @@ type StreamChunk struct {
 		CompletionTokens int `json:"completion_tokens"`
 		TotalTokens      int `json:"total_tokens"`
 	} `json:"usage"`
+	Timings struct {
+		PromptN    int `json:"prompt_n"`
+		PredictedN int `json:"predicted_n"`
+	} `json:"timings"`
 }
 
 // SpeedInfo represents token speed information
@@ -79,6 +86,13 @@ type SpeedInfo struct {
 	TokensPerSecond float64 `json:"tokens_per_second"`
 	TotalTokens     int     `json:"total_tokens"`
 	DurationMs      int64   `json:"duration_ms"`
+}
+
+func messageContentText(content interface{}) string {
+	if text, ok := content.(string); ok {
+		return text
+	}
+	return ""
 }
 
 // NewManager creates a new chat manager
@@ -284,7 +298,10 @@ func (m *Manager) handleStreamingChat(w http.ResponseWriter, r *http.Request, se
 		if data == "[DONE]" {
 			// Send final speed info with actual token counts
 			duration := time.Since(startTime)
-			tokensPerSecond := float64(totalTokens) / duration.Seconds()
+			var tokensPerSecond float64
+			if duration.Seconds() > 0 {
+				tokensPerSecond = float64(totalTokens) / duration.Seconds()
+			}
 
 			speedData := map[string]interface{}{
 				"id":                "speed",
@@ -296,6 +313,7 @@ func (m *Manager) handleStreamingChat(w http.ResponseWriter, r *http.Request, se
 			}
 			speedJSON, _ := json.Marshal(speedData)
 			fmt.Fprintf(w, "data: %s\n\n", speedJSON)
+			fmt.Fprint(w, "data: [DONE]\n\n")
 			flusher.Flush()
 			break
 		}
@@ -308,12 +326,20 @@ func (m *Manager) handleStreamingChat(w http.ResponseWriter, r *http.Request, se
 		// Get actual token counts from chunk
 		if chunk.Usage.PromptTokens > 0 {
 			promptTokens = chunk.Usage.PromptTokens
+		} else if chunk.Timings.PromptN > 0 {
+			promptTokens = chunk.Timings.PromptN
 		}
 		if chunk.Usage.CompletionTokens > 0 {
 			totalTokens = chunk.Usage.CompletionTokens
+		} else if chunk.Timings.PredictedN > 0 {
+			totalTokens = chunk.Timings.PredictedN
 		}
-		if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
-			currentContent.WriteString(chunk.Choices[0].Delta.Content)
+		if len(chunk.Choices) > 0 {
+			if deltaContent := messageContentText(chunk.Choices[0].Delta.Content); deltaContent != "" {
+				currentContent.WriteString(deltaContent)
+			} else if chunk.Choices[0].Text != "" {
+				currentContent.WriteString(chunk.Choices[0].Text)
+			}
 		}
 
 		// Forward the chunk to client

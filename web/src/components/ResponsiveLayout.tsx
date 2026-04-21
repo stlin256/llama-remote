@@ -15,6 +15,7 @@ interface ResponsiveLayoutProps {
 
 export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   const isMobile = useIsMobile()
+  const desktopRibbonWidth = 68
   const [menuOpen, setMenuOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
@@ -137,11 +138,17 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
           position: 'absolute',
           left: 8,
           top: 8,
+          bottom: 8,
+          width: desktopRibbonWidth,
           writingMode: 'vertical-rl',
           textOrientation: 'mixed',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
           background: 'var(--win-blue)',
           color: 'white',
-          padding: '8px 6px',
+          padding: '12px 6px',
           fontSize: 20,
           fontWeight: 'bold',
           fontStyle: 'italic',
@@ -157,7 +164,7 @@ export default function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
         {/* Main window */}
         <div
           className="window"
-          style={{ top: 8, left: 60, right: 8, bottom: 8, minWidth: 750, minHeight: 500 }}
+          style={{ top: 8, left: 8 + desktopRibbonWidth + 12, right: 8, bottom: 8, minWidth: 750, minHeight: 500 }}
         >
           {/* Title bar */}
           <div className="title-bar">

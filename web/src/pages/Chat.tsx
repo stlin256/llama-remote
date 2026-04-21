@@ -3,7 +3,7 @@ import { Send, Trash2, Copy, Check, AlertCircle, MessageCircle, Plus, X, FolderO
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { useStore } from '../store'
-import { api } from '../hooks/api'
+import { api, type ChatContentPart, type ChatRequestMessage } from '../hooks/api'
 import { useTranslation } from '../i18n/useTranslation'
 import { useIsMobile } from '../hooks/useMediaQuery'
 
@@ -11,6 +11,7 @@ interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
+  images?: string[]
   timestamp: number
   tokensPerSecond?: number
   totalTokens?: number
@@ -42,10 +43,61 @@ function loadSessions(): Record<string, ChatSession[]> {
 // Save sessions to localStorage
 function saveSessions(sessions: Record<string, ChatSession[]>) {
   try {
+    if (Object.keys(sessions).length === 0) {
+      localStorage.removeItem(STORAGE_KEY)
+      return
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions))
   } catch (e) {
     console.error('Failed to save chat sessions:', e)
   }
+}
+
+function createSessionId() {
+  return `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function buildSessionName(messages: ChatMessage[]) {
+  const firstUserMessage = messages.find((message) => message.role === 'user')
+  const baseName = firstUserMessage?.content.trim() || (firstUserMessage?.images?.length ? '图片会话' : '新会话')
+  return baseName.slice(0, 30) + (baseName.length > 30 ? '...' : '')
+}
+
+function buildApiMessage(message: ChatMessage): ChatRequestMessage {
+  if (!message.images?.length) {
+    return {
+      role: message.role,
+      content: message.content,
+    }
+  }
+
+  const content: ChatContentPart[] = []
+  if (message.content.trim()) {
+    content.push({ type: 'text', text: message.content })
+  }
+  for (const image of message.images) {
+    content.push({ type: 'image_url', image_url: { url: image } })
+  }
+
+  return {
+    role: message.role,
+    content,
+  }
+}
+
+function readImageAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result)
+        return
+      }
+      reject(new Error('invalid image data'))
+    }
+    reader.onerror = () => reject(reader.error || new Error('failed to decode image'))
+    reader.readAsDataURL(file)
+  })
 }
 
 // Thinking/Reasoning block component (like llama.cpp)
@@ -176,9 +228,7 @@ export default function Chat() {
 
   // Save sessions when they change
   useEffect(() => {
-    if (Object.keys(sessions).length > 0) {
-      saveSessions(sessions)
-    }
+    saveSessions(sessions)
   }, [sessions])
 
   // Load messages when instance or session changes
@@ -225,13 +275,45 @@ export default function Chat() {
     }
   }, [runningInstances, selectedInstanceId])
 
+  const persistSessionMessages = useCallback((instanceId: string, sessionId: string, nextMessages: ChatMessage[]) => {
+    setSessions(prev => {
+      const instanceSessions = prev[instanceId] || []
+      const updatedAt = Date.now()
+      const existingSession = instanceSessions.find(session => session.id === sessionId)
+
+      if (existingSession) {
+        return {
+          ...prev,
+          [instanceId]: instanceSessions.map(session =>
+            session.id === sessionId
+              ? { ...session, messages: nextMessages, updatedAt }
+              : session
+          ),
+        }
+      }
+
+      const newSession: ChatSession = {
+        id: sessionId,
+        name: buildSessionName(nextMessages),
+        messages: nextMessages,
+        createdAt: updatedAt,
+        updatedAt,
+      }
+
+      return {
+        ...prev,
+        [instanceId]: [newSession, ...instanceSessions],
+      }
+    })
+  }, [])
+
   // Create new session
   const handleNewSession = useCallback(() => {
     if (!selectedInstanceId) return
 
     const newSession: ChatSession = {
-      id: `session-${Date.now()}`,
-      name: `会话 ${Object.keys(sessions[selectedInstanceId] || []).length + 1}`,
+      id: createSessionId(),
+      name: `会话 ${(sessions[selectedInstanceId] || []).length + 1}`,
       messages: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -246,7 +328,7 @@ export default function Chat() {
     })
     setCurrentSessionId(newSession.id)
     setMessages([])
-  }, [selectedInstanceId])
+  }, [selectedInstanceId, sessions])
 
   // Handle instance change
   const handleInstanceChange = (instanceId: string) => {
@@ -265,17 +347,7 @@ export default function Chat() {
     setMessages([])
     // Update session in storage
     if (selectedInstanceId && currentSessionId) {
-      setSessions(prev => {
-        const instanceSessions = prev[selectedInstanceId] || []
-        return {
-          ...prev,
-          [selectedInstanceId]: instanceSessions.map(s =>
-            s.id === currentSessionId
-              ? { ...s, messages: [], updatedAt: Date.now() }
-              : s
-          ),
-        }
-      })
+      persistSessionMessages(selectedInstanceId, currentSessionId, [])
     }
     setError(null)
   }
@@ -322,14 +394,19 @@ export default function Chat() {
     setUploading(true)
     try {
       const content = await file.text()
-      // Add file content as a message
       const fileMessage: ChatMessage = {
         id: `file-${Date.now()}`,
         role: 'user',
         content: `[上传文件: ${file.name}]\n\`\`\`\n${content}\n\`\`\``,
         timestamp: Date.now(),
       }
-      setMessages(prev => [...prev, fileMessage])
+      const activeSessionId = currentSessionId || createSessionId()
+      const nextMessages = [...messages, fileMessage]
+      if (!currentSessionId) {
+        setCurrentSessionId(activeSessionId)
+      }
+      setMessages(nextMessages)
+      persistSessionMessages(selectedInstanceId, activeSessionId, nextMessages)
     } catch (err) {
       setError(`文件读取失败: ${err}`)
     } finally {
@@ -345,20 +422,26 @@ export default function Chat() {
 
     setUploading(true)
     try {
-      // Convert image to base64
-      const reader = new FileReader()
-      reader.onload = async () => {
-        const base64 = reader.result as string
-        // For multimodal, we send the image URL
-        const imageMessage: ChatMessage = {
-          id: `image-${Date.now()}`,
-          role: 'user',
-          content: `[图片: ${file.name}]\n${base64}`,
-          timestamp: Date.now(),
-        }
-        setMessages(prev => [...prev, imageMessage])
+      if (chatMode !== 'chat') {
+        throw new Error('图片上传仅支持 Chat 模式')
       }
-      reader.readAsDataURL(file)
+
+      const imageDataUrl = await readImageAsDataUrl(file)
+      const imageMessage: ChatMessage = {
+        id: `image-${Date.now()}`,
+        role: 'user',
+        content: `[图片: ${file.name}]`,
+        images: [imageDataUrl],
+        timestamp: Date.now(),
+      }
+
+      const activeSessionId = currentSessionId || createSessionId()
+      const nextMessages = [...messages, imageMessage]
+      if (!currentSessionId) {
+        setCurrentSessionId(activeSessionId)
+      }
+      setMessages(nextMessages)
+      persistSessionMessages(selectedInstanceId, activeSessionId, nextMessages)
     } catch (err) {
       setError(`图片读取失败: ${err}`)
     } finally {
@@ -367,40 +450,12 @@ export default function Chat() {
     }
   }
 
-  // Save user message to localStorage immediately
-  const saveUserMessageToStorage = useCallback((userMsg: ChatMessage) => {
-    if (!selectedInstanceId) return
-
-    setSessions(prev => {
-      const instanceSessions = prev[selectedInstanceId] || []
-      let updatedSessions: ChatSession[]
-
-      if (currentSessionId) {
-        // Append user message to existing session
-        updatedSessions = instanceSessions.map(s =>
-          s.id === currentSessionId
-            ? { ...s, messages: [...s.messages, userMsg], updatedAt: Date.now() }
-            : s
-        )
-      } else {
-        // Create new session with user message
-        const newSession: ChatSession = {
-          id: `session-${Date.now()}`,
-          name: userMsg.content.slice(0, 30) + (userMsg.content.length > 30 ? '...' : ''),
-          messages: [userMsg],
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        }
-        setCurrentSessionId(newSession.id)
-        updatedSessions = [newSession, ...instanceSessions]
-      }
-
-      return { ...prev, [selectedInstanceId]: updatedSessions }
-    })
-  }, [selectedInstanceId, currentSessionId])
-
   const handleSend = useCallback(async () => {
-    if (!input.trim() || !selectedInstanceId || isLoading) return
+    if (!input.trim() || !selectedInstanceId || isLoading || uploading) return
+    if (chatMode === 'completion' && messages.some(message => message.images?.length)) {
+      setError('Completion 模式不支持图片消息，请切换到 Chat 模式或新建会话。')
+      return
+    }
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -409,21 +464,19 @@ export default function Chat() {
       timestamp: Date.now(),
     }
 
+    const activeSessionId = currentSessionId || createSessionId()
     const newMessages = [...messages, userMessage]
     setMessages(newMessages)
+    if (!currentSessionId) {
+      setCurrentSessionId(activeSessionId)
+    }
     setInput('')
     setIsLoading(true)
     setError(null)
 
-    // Save user message to localStorage immediately (before AI response)
-    saveUserMessageToStorage(userMessage)
+    persistSessionMessages(selectedInstanceId, activeSessionId, newMessages)
 
-    // Build conversation history
-    const conversationHistory = messages.map(m => ({
-      role: m.role,
-      content: m.content,
-    }))
-    conversationHistory.push({ role: 'user', content: userMessage.content })
+    const conversationHistory = newMessages.map(buildApiMessage)
 
     // Create placeholder for assistant message
     const assistantMessageId = `assistant-${Date.now()}`
@@ -438,36 +491,32 @@ export default function Chat() {
     const startTime = Date.now()
     let tokenCount = 0
     let promptTokenCount = 0
+    let streamedTokensPerSecond: number | undefined
 
     try {
       const fullPrompt = chatMode === 'completion'
-        ? conversationHistory.map(m => m.content).join('\n\n')
-        : '';
+        ? newMessages.map(m => m.content).join('\n\n')
+        : ''
       const generator = chatMode === 'completion'
         ? api.sendCompletion(selectedInstanceId, fullPrompt, params)
-        : api.sendChatMessage(selectedInstanceId, conversationHistory, params);
+        : api.sendChatMessage(selectedInstanceId, conversationHistory, params)
 
       for await (const chunk of generator) {
-        if (chunk.done) {
-          // Use accurate token count from API
-          if (chunk.tokens) {
-            tokenCount = chunk.tokens
-          }
-          if (chunk.promptTokens) {
-            promptTokenCount = chunk.promptTokens
-          }
-          break
+        if (typeof chunk.tokens === 'number') {
+          tokenCount = chunk.tokens
         }
+        if (typeof chunk.promptTokens === 'number') {
+          promptTokenCount = chunk.promptTokens
+        }
+        if (typeof chunk.tokensPerSecond === 'number' && chunk.tokensPerSecond > 0) {
+          streamedTokensPerSecond = Math.round(chunk.tokensPerSecond)
+        }
+        if (chunk.done) break
+
         if (chunk.content) {
           fullContent += chunk.content
-          // Use token count from API response if available
-          if (chunk.tokens) {
-            tokenCount = chunk.tokens
-          }
-          if (chunk.promptTokens) {
-            promptTokenCount = chunk.promptTokens
-          }
         }
+
         setMessages(prev => prev.map(m =>
           m.id === assistantMessageId
             ? { ...m, content: fullContent }
@@ -477,9 +526,9 @@ export default function Chat() {
 
       // Calculate tokens per second
       const elapsedSeconds = (Date.now() - startTime) / 1000
-      const tokensPerSecond = tokenCount > 0 && elapsedSeconds > 0
+      const tokensPerSecond = streamedTokensPerSecond ?? (tokenCount > 0 && elapsedSeconds > 0
         ? Math.round(tokenCount / elapsedSeconds)
-        : undefined
+        : undefined)
 
       const assistantMsg: ChatMessage = {
         id: assistantMessageId,
@@ -497,34 +546,7 @@ export default function Chat() {
           : m
       ))
 
-      // Save to localStorage with assistant response
-      if (selectedInstanceId) {
-        setSessions(prev => {
-          const instanceSessions = prev[selectedInstanceId] || []
-          let updatedSessions: ChatSession[]
-
-          if (currentSessionId) {
-            updatedSessions = instanceSessions.map(s =>
-              s.id === currentSessionId
-                ? { ...s, messages: [...newMessages, assistantMsg], updatedAt: Date.now() }
-                : s
-            )
-          } else {
-            // Create new session
-            const newSession: ChatSession = {
-              id: `session-${Date.now()}`,
-              name: fullContent.slice(0, 30) + (fullContent.length > 30 ? '...' : ''),
-              messages: [...newMessages, assistantMsg],
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-            }
-            setCurrentSessionId(newSession.id)
-            updatedSessions = [newSession, ...instanceSessions]
-          }
-
-          return { ...prev, [selectedInstanceId]: updatedSessions }
-        })
-      }
+      persistSessionMessages(selectedInstanceId, activeSessionId, [...newMessages, assistantMsg])
     } catch (e: any) {
       setError(e.message || t('connectionError'))
       // Keep user message in the chat but remove placeholder
@@ -538,21 +560,11 @@ export default function Chat() {
         timestamp: Date.now(),
         isError: true,
       }
-      setSessions(prev => {
-        const instanceSessions = prev[selectedInstanceId] || []
-        return {
-          ...prev,
-          [selectedInstanceId]: instanceSessions.map(s =>
-            s.id === currentSessionId
-              ? { ...s, messages: [...newMessages, errorMsg], updatedAt: Date.now() }
-              : s
-          )
-        }
-      })
+      persistSessionMessages(selectedInstanceId, activeSessionId, [...newMessages, errorMsg])
     } finally {
       setIsLoading(false)
     }
-  }, [input, selectedInstanceId, messages, currentSessionId, isLoading, t, saveUserMessageToStorage])
+  }, [chatMode, currentSessionId, input, isLoading, messages, params, persistSessionMessages, selectedInstanceId, t, uploading])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -938,7 +950,9 @@ export default function Chat() {
             {messages.map((message) => {
               // Extract thinking first, then images
               const { thinking, content: contentWithoutThinking } = extractThinking(message.content)
-              const { images, text } = extractImages(contentWithoutThinking)
+              const { images: inlineImages, text } = extractImages(contentWithoutThinking)
+              const images = [...(message.images || []), ...inlineImages]
+              const displayText = text || (thinking ? '' : message.content)
               const isError = (message as any).isError
 
               return (
@@ -991,7 +1005,7 @@ export default function Chat() {
                 )}
 
                 {/* Message content */}
-                {(text || !images.length) && (
+                {displayText && (
                   <div
                     style={{
                       maxWidth: isMobile ? '85%' : '70%',
@@ -1004,7 +1018,7 @@ export default function Chat() {
                       borderColor: '#808080 #fff #fff #808080',
                     }}
                   >
-                    {renderContent(text || message.content, message.id)}
+                    {renderContent(displayText, message.id)}
                   </div>
                 )}
 
@@ -1082,9 +1096,9 @@ export default function Chat() {
               <button
                 onClick={() => imageInputRef.current?.click()}
                 className="btn"
-                disabled={uploading || isLoading}
+                disabled={uploading || isLoading || chatMode !== 'chat'}
                 style={{ display: 'flex', alignItems: 'center', gap: 4 }}
-                title="上传图片 (需要多模态模型)"
+                title={chatMode === 'chat' ? '上传图片 (需要多模态模型)' : '图片上传仅支持 Chat 模式'}
               >
                 <ImageIcon size={12} />
                 {!isMobile && '图片'}
@@ -1108,12 +1122,12 @@ export default function Chat() {
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t('typeMessage')}
-            disabled={isLoading}
+            disabled={isLoading || uploading}
           />
           <button
             onClick={handleSend}
             className="btn btn-primary"
-            disabled={!input.trim() || isLoading}
+            disabled={!input.trim() || isLoading || uploading}
             style={{
               minWidth: isMobile ? 60 : 80,
               display: 'flex',

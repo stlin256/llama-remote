@@ -4,6 +4,7 @@ import { api } from '../hooks/api'
 import { useTranslation } from '../i18n/useTranslation'
 
 export default function Login() {
+  const desktopRibbonWidth = 68
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -32,11 +33,17 @@ export default function Login() {
         position: 'absolute',
         left: 8,
         top: 8,
+        bottom: 8,
+        width: desktopRibbonWidth,
         writingMode: 'vertical-rl',
         textOrientation: 'mixed',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
         background: 'var(--win-blue)',
         color: 'white',
-        padding: '8px 6px',
+        padding: '12px 6px',
         fontSize: 20,
         fontWeight: 'bold',
         fontStyle: 'italic',
