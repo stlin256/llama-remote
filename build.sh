@@ -10,7 +10,7 @@ echo "=== Building Llama Remote ==="
 # Build frontend
 echo "Building frontend..."
 cd web
-npm install
+npm ci
 npm run build
 cd ..
 

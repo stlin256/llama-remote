@@ -5,10 +5,12 @@ import (
 	"embed"
 	"flag"
 	"fmt"
+	"mime"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	pathpkg "path"
 	"strings"
 	"syscall"
 	"time"
@@ -161,19 +163,19 @@ func main() {
 
 	// 前端静态文件 (SPA支持)
 	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
+		requestPath := strings.TrimPrefix(pathpkg.Clean("/"+r.URL.Path), "/")
+		embedPath := "dist/index.html"
 
-		// 去除前导斜杠
-		path = strings.TrimPrefix(path, "/")
-
-		// embed的FS是相对于dist目录的
-		embedPath := "dist/" + path
-
-		// 检查文件是否存在
-		_, err := assets.Open(embedPath)
-		if err != nil {
-			// 文件不存在，返回index.html (SPA路由)
-			embedPath = "dist/index.html"
+		if requestPath != "" && requestPath != "." {
+			candidate := "dist/" + requestPath
+			file, err := assets.Open(candidate)
+			if err == nil {
+				stat, statErr := file.Stat()
+				_ = file.Close()
+				if statErr == nil && !stat.IsDir() {
+					embedPath = candidate
+				}
+			}
 		}
 
 		data, err := assets.ReadFile(embedPath)
@@ -183,15 +185,8 @@ func main() {
 		}
 
 		// 设置正确的Content-Type
-		switch {
-		case strings.HasSuffix(path, ".html"):
-			w.Header().Set("Content-Type", "text/html")
-		case strings.HasSuffix(path, ".js"):
-			w.Header().Set("Content-Type", "application/javascript")
-		case strings.HasSuffix(path, ".css"):
-			w.Header().Set("Content-Type", "text/css")
-		case strings.HasSuffix(path, ".svg"):
-			w.Header().Set("Content-Type", "image/svg+xml")
+		if contentType := mime.TypeByExtension(pathpkg.Ext(embedPath)); contentType != "" {
+			w.Header().Set("Content-Type", contentType)
 		}
 
 		w.Write(data)

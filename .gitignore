@@ -1,5 +1,6 @@
 # Build output
 llama-remote
+llama-remote.exe
 llama-remote-linux-amd64
 
 # IDE
@@ -17,8 +18,9 @@ node_modules/
 
 # Build
 web/dist/
-dist/
-cmd/server/dist/
+/dist/
+cmd/server/dist/*
+!cmd/server/dist/placeholder.txt
 
 # IDE
 .claude/

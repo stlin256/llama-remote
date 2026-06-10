@@ -77,8 +77,8 @@
 - 日志存储目录
 
 **Web服务配置**
-- 监听地址 (默认 0.0.0.0)
-- 监听端口 (默认 8080)
+- 监听地址 (默认 127.0.0.1)
+- 监听端口 (默认 8000)
 
 ### 4.2 模型扫描
 
@@ -107,7 +107,7 @@ mmproj: "/path/to/mmproj.gguf"
 params:                       # 启动参数
   ngl: 999
   context: 8192
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 5000
   flash_attention: true
   # ... 其他参数
@@ -309,8 +309,8 @@ variables:
 ```yaml
 # config.yaml
 server:
-  host: "0.0.0.0"
-  port: 8080
+  host: "127.0.0.1"
+  port: 8000
 
 paths:
   llama_bin: "/home/user/llama.cpp/build/bin/llama-server"
@@ -327,7 +327,7 @@ instances:
     params:
       ngl: 999
       context: 8192
-      host: "0.0.0.0"
+      host: "127.0.0.1"
       port: 5000
       fa: true
     prompt_template: ""
@@ -375,7 +375,7 @@ services:
   llama-remote:
     image: llama-remote:latest
     ports:
-      - "8080:8080"
+      - "8000:8000"
     volumes:
       - ~/.llama-remote:/root/.llama-remote
       - /path/to/models:/models

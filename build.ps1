@@ -1,28 +1,16 @@
-#!/bin/bash
+$ErrorActionPreference = "Stop"
 
-# Windows build script using Git Bash or WSL
-# This builds Linux amd64 binary
+Write-Host "=== Building Llama Remote ==="
 
-set -e
-
-echo "=== Building Llama Remote for Linux ==="
-
-# Build frontend
-echo "[1/2] Building frontend..."
-cd web
-npm install
+Write-Host "[1/2] Building frontend..."
+Push-Location web
+npm ci
 npm run build
-cd ..
+Pop-Location
 
-# Build Go backend for Linux
-echo "[2/2] Building Go backend for Linux amd64..."
-GOOS=linux GOARCH=amd64 go build -o llama-remote-linux-amd64 ./cmd/server
+Write-Host "[2/2] Building Go backend..."
+go build -o llama-remote.exe ./cmd/server
 
-echo ""
-echo "=== Build complete ==="
-echo "Output: llama-remote-linux-amd64"
-echo ""
-echo "To deploy to Linux server:"
-echo "  scp llama-remote-linux-amd64 user@server:/path/to/"
-echo "  ssh user@server"
-echo "  ./llama-remote-linux-amd64"
+Write-Host ""
+Write-Host "=== Build complete ==="
+Write-Host "Output: llama-remote.exe"

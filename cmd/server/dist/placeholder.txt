@@ -1,0 +1,2 @@
+This placeholder keeps the embedded dist directory present for Go builds.
+Run the frontend build before producing a release binary.

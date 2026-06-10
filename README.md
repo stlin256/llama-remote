@@ -37,6 +37,25 @@ cd llama-remote
 
 Then open `http://localhost:8000` in your browser.
 
+By default the control panel listens on `127.0.0.1:8000` and managed
+`llama-server` instances bind to `127.0.0.1`. If you expose it to another
+machine, set an explicit listen address and enable authentication first.
+
+### Build from source
+
+```bash
+./build.sh
+```
+
+On Windows:
+
+```powershell
+.\build.ps1
+```
+
+The build scripts compile the React frontend into `cmd/server/dist` before
+building the Go binary, so the final executable contains the web UI.
+
 ### Configuration
 
 The first time you run it, you might want to configure:
@@ -91,6 +110,24 @@ cd llama-remote
 ```
 
 然后在浏览器打开 `http://localhost:8000`。
+
+默认情况下，控制面板只监听 `127.0.0.1:8000`，被管理的 `llama-server`
+实例也只绑定 `127.0.0.1`。如果需要从其他机器访问，请先显式修改监听地址并开启认证。
+
+### 从源码构建
+
+```bash
+./build.sh
+```
+
+Windows:
+
+```powershell
+.\build.ps1
+```
+
+构建脚本会先把 React 前端编译到 `cmd/server/dist`，再构建 Go 二进制，
+最终可执行文件会内嵌 Web UI。
 
 ### 配置
 
