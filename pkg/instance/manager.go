@@ -41,21 +41,26 @@ type InstanceData struct {
 }
 
 type Manager struct {
-	cfg        *config.Config
-	instances  map[string]*Instance
-	mu         sync.RWMutex
-	logManager *logs.Manager
-	wsManager  *websocket.Manager
-	dataFile   string
+	cfg         *config.Config
+	instances   map[string]*Instance
+	processes   map[string]*exec.Cmd
+	startTokens map[string]uint64
+	nextStart   uint64
+	mu          sync.RWMutex
+	logManager  *logs.Manager
+	wsManager   *websocket.Manager
+	dataFile    string
 }
 
 func NewManager(cfg *config.Config, logManager *logs.Manager, wsManager *websocket.Manager) *Manager {
 	m := &Manager{
-		cfg:        cfg,
-		instances:  make(map[string]*Instance),
-		logManager: logManager,
-		wsManager:  wsManager,
-		dataFile:   filepath.Join(cfg.DataDir, "instances.yaml"),
+		cfg:         cfg,
+		instances:   make(map[string]*Instance),
+		processes:   make(map[string]*exec.Cmd),
+		startTokens: make(map[string]uint64),
+		logManager:  logManager,
+		wsManager:   wsManager,
+		dataFile:    filepath.Join(cfg.DataDir, "instances.yaml"),
 	}
 	m.loadInstances()
 	return m
@@ -82,6 +87,17 @@ func (m *Manager) loadInstances() {
 }
 
 func (m *Manager) saveInstances() {
+	m.mu.RLock()
+	instanceData := m.instanceDataLocked()
+	m.mu.RUnlock()
+	m.writeInstances(instanceData)
+}
+
+func (m *Manager) saveInstancesLocked() {
+	m.writeInstances(m.instanceDataLocked())
+}
+
+func (m *Manager) instanceDataLocked() InstanceData {
 	instanceData := InstanceData{
 		Instances: make([]Instance, 0, len(m.instances)),
 	}
@@ -89,14 +105,26 @@ func (m *Manager) saveInstances() {
 	for _, inst := range m.instances {
 		instanceData.Instances = append(instanceData.Instances, *inst)
 	}
+	sort.Slice(instanceData.Instances, func(i, j int) bool {
+		return instanceData.Instances[i].Name < instanceData.Instances[j].Name
+	})
+	return instanceData
+}
 
+func (m *Manager) writeInstances(instanceData InstanceData) {
 	data, err := yaml.Marshal(instanceData)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to marshal instances: %v\n", err)
 		return
 	}
 
-	if err := os.WriteFile(m.dataFile, data, 0644); err != nil {
+	tmpFile := m.dataFile + ".tmp"
+	if err := os.WriteFile(tmpFile, data, 0600); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to save instances: %v\n", err)
+		return
+	}
+	if err := os.Rename(tmpFile, m.dataFile); err != nil {
+		_ = os.Remove(tmpFile)
 		fmt.Fprintf(os.Stderr, "Failed to save instances: %v\n", err)
 	}
 }
@@ -107,7 +135,8 @@ func (m *Manager) List() []*Instance {
 
 	result := make([]*Instance, 0, len(m.instances))
 	for _, inst := range m.instances {
-		result = append(result, inst)
+		cloned := cloneInstance(inst)
+		result = append(result, &cloned)
 	}
 
 	// Sort by name for consistent ordering
@@ -122,7 +151,152 @@ func (m *Manager) Get(id string) (*Instance, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	inst, ok := m.instances[id]
-	return inst, ok
+	if !ok {
+		return nil, false
+	}
+	cloned := cloneInstance(inst)
+	return &cloned, true
+}
+
+func cloneInstance(inst *Instance) Instance {
+	cloned := *inst
+	if inst.Params != nil {
+		cloned.Params = make(map[string]interface{}, len(inst.Params))
+		for key, value := range inst.Params {
+			cloned.Params[key] = value
+		}
+	}
+	return cloned
+}
+
+func instancePort(inst Instance) int {
+	port := inst.Port
+	if port <= 0 && inst.Params != nil {
+		if p, ok := intParam(inst.Params, "port"); ok {
+			port = p
+		}
+	}
+	if port <= 0 {
+		port = 5000
+	}
+	return port
+}
+
+func intParam(params map[string]interface{}, key string) (int, bool) {
+	if params == nil {
+		return 0, false
+	}
+	switch value := params[key].(type) {
+	case int:
+		return value, true
+	case int32:
+		return int(value), true
+	case int64:
+		return int(value), true
+	case uint:
+		return int(value), true
+	case uint32:
+		return int(value), true
+	case uint64:
+		return int(value), true
+	case float32:
+		return int(value), true
+	case float64:
+		return int(value), true
+	case string:
+		parsed, err := strconv.Atoi(strings.TrimSpace(value))
+		return parsed, err == nil
+	default:
+		return 0, false
+	}
+}
+
+func buildLlamaArgs(inst Instance, port int) []string {
+	args := []string{}
+
+	if inst.Model != "" {
+		args = append(args, "-m", inst.Model)
+	}
+	if inst.Mmproj != "" {
+		args = append(args, "--mmproj", inst.Mmproj)
+	}
+
+	args = append(args, "--port", fmt.Sprintf("%d", port))
+	if host, ok := inst.Params["host"].(string); ok && host != "" {
+		args = append(args, "--host", host)
+	} else {
+		args = append(args, "--host", "127.0.0.1")
+	}
+
+	if ngl, ok := intParam(inst.Params, "ngl"); ok {
+		args = append(args, "-ngl", fmt.Sprintf("%d", ngl))
+	}
+	if context, ok := intParam(inst.Params, "context"); ok {
+		args = append(args, "-c", fmt.Sprintf("%d", context))
+	}
+	if threads, ok := intParam(inst.Params, "threads"); ok {
+		args = append(args, "-t", fmt.Sprintf("%d", threads))
+	}
+	if fa, ok := inst.Params["flash_attention"].(bool); ok && fa {
+		args = append(args, "--flash-attn", "on")
+	}
+	if mlock, ok := inst.Params["mlock"].(bool); ok && mlock {
+		args = append(args, "-mlock")
+	}
+	if noMap, ok := inst.Params["no-mmap"].(bool); ok && noMap {
+		args = append(args, "--no-mmap")
+	}
+	if batchSize, ok := intParam(inst.Params, "batch_size"); ok && batchSize > 0 {
+		args = append(args, "-b", fmt.Sprintf("%d", batchSize))
+	}
+
+	return args
+}
+
+func isActiveStatus(status string) bool {
+	return status == "starting" || status == "loading" || status == "running"
+}
+
+func (m *Manager) setInstanceState(id, status string, pid int, removeProcess bool) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	inst, ok := m.instances[id]
+	if !ok {
+		return false
+	}
+	changed := false
+	if status != "" {
+		if inst.Status != status {
+			inst.Status = status
+			changed = true
+		}
+	}
+	if pid >= 0 {
+		if inst.PID != pid {
+			inst.PID = pid
+			changed = true
+		}
+	}
+	if removeProcess {
+		if _, ok := m.processes[id]; ok {
+			delete(m.processes, id)
+			changed = true
+		}
+	}
+	if changed {
+		m.saveInstancesLocked()
+	}
+	return changed
+}
+
+func (m *Manager) snapshotInstances() []Instance {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	instances := make([]Instance, 0, len(m.instances))
+	for _, inst := range m.instances {
+		instances = append(instances, cloneInstance(inst))
+	}
+	return instances
 }
 
 func (m *Manager) Create(inst *Instance) error {
@@ -140,7 +314,7 @@ func (m *Manager) Create(inst *Instance) error {
 	}
 
 	m.instances[inst.ID] = inst
-	m.saveInstances()
+	m.saveInstancesLocked()
 	return nil
 }
 
@@ -165,22 +339,30 @@ func (m *Manager) Update(inst *Instance) error {
 	}
 
 	m.instances[inst.ID] = inst
-	m.saveInstances()
+	m.saveInstancesLocked()
 	return nil
 }
 
 func (m *Manager) Delete(id string) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if inst, ok := m.instances[id]; ok {
-		if inst.Status == "running" {
-			m.stopInstance(inst)
-		}
+	inst, ok := m.instances[id]
+	if !ok {
+		m.mu.Unlock()
+		return nil
 	}
-
+	cmd := m.processes[id]
+	pid := inst.PID
 	delete(m.instances, id)
-	m.saveInstances()
+	delete(m.processes, id)
+	delete(m.startTokens, id)
+	m.saveInstancesLocked()
+	m.mu.Unlock()
+
+	if cmd != nil && cmd.Process != nil {
+		_ = cmd.Process.Kill()
+	} else if pid > 0 {
+		_ = killPID(pid)
+	}
 	return nil
 }
 
@@ -191,140 +373,78 @@ func (m *Manager) Start(id string) error {
 		m.mu.Unlock()
 		return fmt.Errorf("instance not found")
 	}
-	if inst.Status == "running" {
+	if isActiveStatus(inst.Status) {
+		status := inst.Status
 		m.mu.Unlock()
-		return fmt.Errorf("instance already running")
+		return fmt.Errorf("instance already %s", status)
 	}
+
+	instSnapshot := cloneInstance(inst)
+	port := instancePort(instSnapshot)
+	logFile := filepath.Join(m.cfg.LogDir, fmt.Sprintf("%s.log", instSnapshot.ID))
+
+	m.nextStart++
+	startToken := m.nextStart
+	m.startTokens[id] = startToken
 	inst.Status = "starting"
+	inst.PID = 0
+	inst.Port = port
+	inst.LogFile = logFile
+	m.saveInstancesLocked()
 	m.mu.Unlock()
 
-	// 使用配置的llama-server路径
-	llamaBin := m.cfg.Paths.LlamaBin
+	if m.wsManager != nil {
+		m.wsManager.BroadcastInstanceStatus(id, "starting")
+	}
+
+	llamaBin := strings.TrimSpace(m.cfg.Paths.LlamaBin)
 	if llamaBin == "" {
-		return fmt.Errorf("llama.cpp binary not configured in settings")
+		return m.failInstanceStart(id, startToken, fmt.Errorf("llama.cpp binary not configured in settings"))
 	}
 
-	// 构建命令行参数
-	args := []string{}
-
-	// 添加模型参数
-	if inst.Model != "" {
-		args = append(args, "-m", inst.Model)
-	}
-
-	// 添加mmproj参数
-	if inst.Mmproj != "" {
-		args = append(args, "--mmproj", inst.Mmproj)
-	}
-
-	// 添加其他参数
-	port := inst.Port
-	if port <= 0 {
-		// 尝试从params中获取端口
-		if p, ok := inst.Params["port"].(float64); ok {
-			port = int(p)
-		}
-	}
-	if port <= 0 {
-		port = 5000
-	}
-	args = append(args, "--port", fmt.Sprintf("%d", port))
-
-	if host, ok := inst.Params["host"].(string); ok && host != "" {
-		args = append(args, "--host", host)
-	} else {
-		args = append(args, "--host", "127.0.0.1")
-	}
-
-	if ngl, ok := inst.Params["ngl"].(float64); ok {
-		args = append(args, "-ngl", fmt.Sprintf("%d", int(ngl)))
-	}
-
-	if context, ok := inst.Params["context"].(float64); ok {
-		args = append(args, "-c", fmt.Sprintf("%d", int(context)))
-	}
-
-	if threads, ok := inst.Params["threads"].(float64); ok {
-		args = append(args, "-t", fmt.Sprintf("%d", int(threads)))
-	}
-
-	if fa, ok := inst.Params["flash_attention"].(bool); ok && fa {
-		args = append(args, "--flash-attn", "on")
-	}
-
-	if mlock, ok := inst.Params["mlock"].(bool); ok && mlock {
-		args = append(args, "-mlock")
-	}
-
-	if noMap, ok := inst.Params["no-mmap"].(bool); ok && noMap {
-		args = append(args, "--no-mmap")
-	}
-
-	if batchSize, ok := inst.Params["batch_size"].(float64); ok && batchSize > 0 {
-		args = append(args, "-b", fmt.Sprintf("%d", int(batchSize)))
-	}
-
-	// 添加提示词模板参数 (仅当不为空时，且服务器版本支持)
-	// 注意: llama.cpp server 模式不支持 -sys 参数
-	// if inst.PromptTemplate != "" {
-	// 	args = append(args, "-sys", inst.PromptTemplate)
-	// }
-
-	// 创建日志文件
-	logFile := filepath.Join(m.cfg.LogDir, fmt.Sprintf("%s.log", inst.ID))
-	inst.LogFile = logFile
-
-	// 打开日志文件
-	lf, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	args := buildLlamaArgs(instSnapshot, port)
+	lf, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
-		inst.Status = "error"
-		m.saveInstances()
-		return fmt.Errorf("failed to open log file: %w", err)
+		return m.failInstanceStart(id, startToken, fmt.Errorf("failed to open log file: %w", err))
 	}
 
-	// 创建命令，使用管道捕获输出
 	cmd := exec.Command(llamaBin, args...)
-
-	// 创建管道
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		lf.Close()
-		inst.Status = "error"
-		m.saveInstances()
-		return fmt.Errorf("failed to create stdout pipe: %w", err)
+		_ = lf.Close()
+		return m.failInstanceStart(id, startToken, fmt.Errorf("failed to create stdout pipe: %w", err))
 	}
 	cmd.Stderr = lf
 
-	// 启动进程
 	if err := cmd.Start(); err != nil {
-		lf.Close()
-		stdoutPipe.Close()
-		inst.Status = "error"
-		m.saveInstances()
-		return fmt.Errorf("failed to start llama-server: %w", err)
+		_ = lf.Close()
+		_ = stdoutPipe.Close()
+		return m.failInstanceStart(id, startToken, fmt.Errorf("failed to start llama-server: %w", err))
 	}
-
-	inst.PID = cmd.Process.Pid
-	inst.Status = "running"
 
 	m.mu.Lock()
-	m.instances[inst.ID] = inst
+	current, ok := m.instances[id]
+	tokenMatches := m.startTokens[id] == startToken
+	if !ok || !tokenMatches || !isActiveStatus(current.Status) {
+		m.mu.Unlock()
+		_ = cmd.Process.Kill()
+		go reapProcess(cmd, stdoutPipe, lf)
+		return fmt.Errorf("instance start cancelled")
+	}
+	delete(m.startTokens, id)
+	current.PID = cmd.Process.Pid
+	current.Status = "loading"
+	current.Port = port
+	current.LogFile = logFile
+	m.processes[id] = cmd
+	m.saveInstancesLocked()
 	m.mu.Unlock()
 
-	// 启动 goroutine 解析输出并写入日志文件
-	go m.parseOutput(inst.ID, stdoutPipe, lf)
+	go m.monitorProcess(id, cmd, stdoutPipe, lf)
 
-	// 等待服务真正启动
-	time.Sleep(2 * time.Second)
-
-	// 检查进程是否还在运行
-	if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-		inst.Status = "error"
-		m.saveInstances()
-		return fmt.Errorf("llama-server exited unexpectedly")
+	if m.wsManager != nil {
+		m.wsManager.BroadcastInstanceStatus(id, "loading")
 	}
-
-	m.saveInstances()
 	return nil
 }
 
@@ -335,44 +455,154 @@ func (m *Manager) Stop(id string) error {
 		m.mu.Unlock()
 		return fmt.Errorf("instance not found")
 	}
-	m.mu.Unlock()
-
-	return m.stopInstance(inst)
-}
-
-func (m *Manager) stopInstance(inst *Instance) error {
-	if inst.PID > 0 {
-		proc, err := os.FindProcess(inst.PID)
-		if err == nil {
-			proc.Kill()
-		}
-	}
+	cmd := m.processes[id]
+	pid := inst.PID
+	delete(m.startTokens, id)
 	inst.Status = "stopped"
 	inst.PID = 0
-	m.saveInstances()
+	m.saveInstancesLocked()
+	m.mu.Unlock()
+
+	if m.wsManager != nil {
+		m.wsManager.BroadcastInstanceStatus(id, "stopped")
+	}
+	if cmd != nil && cmd.Process != nil {
+		if err := cmd.Process.Kill(); err != nil {
+			log.Printf("Stop: kill failed for instance %s: %v", id, err)
+		}
+	} else if pid > 0 {
+		if err := killPID(pid); err != nil {
+			log.Printf("Stop: kill failed for PID %d: %v", pid, err)
+		}
+	}
 	return nil
 }
 
-func (m *Manager) StopAll() {
+func (m *Manager) failInstanceStart(id string, startToken uint64, startErr error) error {
+	shouldBroadcast := false
+
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	if inst, ok := m.instances[id]; ok && m.startTokens[id] == startToken {
+		delete(m.startTokens, id)
+		inst.Status = "error"
+		inst.PID = 0
+		m.saveInstancesLocked()
+		shouldBroadcast = true
+	}
+	m.mu.Unlock()
+
+	if shouldBroadcast && m.wsManager != nil {
+		m.wsManager.BroadcastInstanceStatus(id, "error")
+		m.wsManager.BroadcastInstanceError(id, startErr.Error())
+	}
+	return startErr
+}
+
+func reapProcess(cmd *exec.Cmd, stdout io.ReadCloser, logFile *os.File) {
+	_, _ = io.Copy(io.Discard, stdout)
+	_ = stdout.Close()
+	_ = cmd.Wait()
+	_ = logFile.Close()
+}
+
+func (m *Manager) monitorProcess(instanceID string, cmd *exec.Cmd, stdout io.ReadCloser, logFile *os.File) {
+	m.parseOutput(instanceID, stdout, logFile)
+	err := cmd.Wait()
+	_ = logFile.Close()
+	m.finishProcess(instanceID, cmd, err)
+}
+
+func (m *Manager) finishProcess(instanceID string, cmd *exec.Cmd, err error) {
+	nextStatus := ""
+
+	m.mu.Lock()
+	currentCmd, tracked := m.processes[instanceID]
+	if !tracked || currentCmd != cmd {
+		m.mu.Unlock()
+		return
+	}
+	delete(m.processes, instanceID)
+
+	if inst, ok := m.instances[instanceID]; ok {
+		inst.PID = 0
+		if isActiveStatus(inst.Status) {
+			if err != nil {
+				inst.Status = "error"
+				nextStatus = "error"
+			} else {
+				inst.Status = "stopped"
+				nextStatus = "stopped"
+			}
+		}
+		m.saveInstancesLocked()
+	}
+	m.mu.Unlock()
+
+	if nextStatus != "" && m.wsManager != nil {
+		m.wsManager.BroadcastInstanceStatus(instanceID, nextStatus)
+		if nextStatus == "error" {
+			errMsg := ""
+			if m.logManager != nil {
+				errMsg = extractErrorMessage(m.logManager.GetRecentLogs(instanceID, 50))
+			}
+			if errMsg == "" && err != nil {
+				errMsg = err.Error()
+			}
+			if errMsg != "" {
+				m.wsManager.BroadcastInstanceError(instanceID, errMsg)
+			}
+		}
+	}
+}
+
+func (m *Manager) StopAll() {
+	type processRef struct {
+		id   string
+		name string
+		cmd  *exec.Cmd
+		pid  int
+	}
+
+	refs := []processRef{}
+	m.mu.Lock()
+	for id, inst := range m.instances {
+		if inst.PID > 0 || isActiveStatus(inst.Status) {
+			refs = append(refs, processRef{
+				id:   id,
+				name: inst.Name,
+				cmd:  m.processes[id],
+				pid:  inst.PID,
+			})
+			inst.Status = "stopped"
+			inst.PID = 0
+		}
+		delete(m.startTokens, id)
+	}
+	m.saveInstancesLocked()
+	m.mu.Unlock()
+
+	for _, ref := range refs {
+		if m.wsManager != nil {
+			m.wsManager.BroadcastInstanceStatus(ref.id, "stopped")
+		}
+		if ref.cmd != nil && ref.cmd.Process != nil {
+			log.Printf("StopAll: killing PID %d (%s)", ref.cmd.Process.Pid, ref.name)
+			if err := ref.cmd.Process.Kill(); err != nil {
+				log.Printf("StopAll: kill failed for PID %d: %v", ref.cmd.Process.Pid, err)
+			}
+			continue
+		}
+		if ref.pid > 0 {
+			log.Printf("StopAll: killing PID %d (%s)", ref.pid, ref.name)
+			if err := killPID(ref.pid); err != nil {
+				log.Printf("StopAll: kill failed for PID %d: %v", ref.pid, err)
+			}
+		}
+	}
 
 	binaryName := "llama-server"
 	if m.cfg.Paths.LlamaBin != "" {
 		binaryName = filepath.Base(m.cfg.Paths.LlamaBin)
-	}
-
-	// First kill all tracked instances.
-	for _, inst := range m.instances {
-		if inst.PID > 0 {
-			log.Printf("StopAll: killing PID %d (%s)", inst.PID, inst.Name)
-			err := killPID(inst.PID)
-			if err != nil {
-				log.Printf("StopAll: kill failed for PID %d: %v", inst.PID, err)
-			}
-			inst.Status = "stopped"
-			inst.PID = 0
-		}
 	}
 
 	// Also kill any orphaned llama-server processes left outside our tracked
@@ -396,135 +626,107 @@ func (m *Manager) StopAll() {
 	} else {
 		log.Printf("StopAll: pgrep returned: %v", err)
 	}
-
-	m.saveInstances()
 }
 
 func (m *Manager) WatchStatus(wsMgr *websocket.Manager, logMgr *logs.Manager) {
+	if wsMgr == nil {
+		wsMgr = m.wsManager
+	}
+	if logMgr == nil {
+		logMgr = m.logManager
+	}
+
 	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 
-	// 创建带超时的HTTP客户端
 	httpClient := &http.Client{
 		Timeout: 2 * time.Second,
 	}
 
 	for range ticker.C {
-		m.mu.Lock()
-		for _, inst := range m.instances {
-			// 检查运行中或加载中的实例
-			if (inst.Status == "running" || inst.Status == "loading") && inst.PID > 0 {
-				// 检查进程是否存在 - 使用 signal 0 来检测
-				proc, err := os.FindProcess(inst.PID)
-				if err != nil || proc.Pid < 0 {
-					// 进程不存在，获取错误日志
-					errMsg := extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
-					inst.Status = "error"
-					inst.PID = 0
-					wsMgr.BroadcastInstanceStatus(inst.ID, "error")
-					if errMsg != "" {
-						wsMgr.BroadcastInstanceError(inst.ID, errMsg)
-					}
-					m.saveInstances()
-					continue
-				}
+		for _, inst := range m.snapshotInstances() {
+			if !isActiveStatus(inst.Status) || inst.PID <= 0 {
+				continue
+			}
 
-				// 获取端口
-				port := inst.Port
-				if port <= 0 {
-					if p, ok := inst.Params["port"].(float64); ok {
-						port = int(p)
-					}
-				}
-				if port <= 0 {
-					port = 5000
-				}
+			status := ""
+			pid := -1
+			errMsg := ""
+			url := fmt.Sprintf("http://127.0.0.1:%d/health", instancePort(inst))
 
-				// 检查服务器是否在响应
-				url := fmt.Sprintf("http://127.0.0.1:%d/health", port)
-				resp, err := httpClient.Get(url)
-				if err != nil {
-					// 服务器未响应，检查是否是错误状态
-					errMsg := extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
-					// 检查日志中是否有关键错误信息
-					lowerErr := strings.ToLower(errMsg)
-					if strings.Contains(lowerErr, "failed") ||
-						strings.Contains(lowerErr, "error") ||
-						strings.Contains(lowerErr, "out of memory") ||
-						strings.Contains(lowerErr, "cuda") ||
-						strings.Contains(lowerErr, "abort") ||
-						strings.Contains(lowerErr, "cannot") {
-						// 真正的错误
-						inst.Status = "error"
-						inst.PID = 0
-						wsMgr.BroadcastInstanceStatus(inst.ID, "error")
-						if errMsg != "" {
-							wsMgr.BroadcastInstanceError(inst.ID, errMsg)
-						}
-						m.saveInstances()
-						continue
-					}
-					// 否则可能是加载中
-					if inst.Status != "loading" {
-						inst.Status = "loading"
-						wsMgr.BroadcastInstanceStatus(inst.ID, "loading")
-						m.saveInstances()
-					}
-					continue
+			resp, err := httpClient.Get(url)
+			if err != nil {
+				if logMgr != nil {
+					errMsg = extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
 				}
-				resp.Body.Close()
-
-				if resp.StatusCode == 200 {
-					// 服务器已就绪
-					if inst.Status != "running" {
-						inst.Status = "running"
-						wsMgr.BroadcastInstanceStatus(inst.ID, "running")
-						m.saveInstances()
-					}
-				} else if resp.StatusCode == 503 {
-					// 503 可能是加载中，需要检查日志判断是真正错误还是加载中
-					errMsg := extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
-					if strings.Contains(strings.ToLower(errMsg), "error") || strings.Contains(strings.ToLower(errMsg), "failed") || strings.Contains(strings.ToLower(errMsg), "panic") {
-						// 真正的错误
-						inst.Status = "error"
-						inst.PID = 0
-						wsMgr.BroadcastInstanceStatus(inst.ID, "error")
-						wsMgr.BroadcastInstanceError(inst.ID, errMsg)
-						m.saveInstances()
-					} else {
-						// 加载中
-						if inst.Status != "loading" {
-							inst.Status = "loading"
-							wsMgr.BroadcastInstanceStatus(inst.ID, "loading")
-							m.saveInstances()
-						}
-					}
+				if isFatalLogMessage(errMsg) {
+					status = "error"
+					pid = 0
 				} else {
-					// 其他错误码视为错误
-					errMsg := extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
-					inst.Status = "error"
-					inst.PID = 0
-					wsMgr.BroadcastInstanceStatus(inst.ID, "error")
-					if errMsg != "" {
-						wsMgr.BroadcastInstanceError(inst.ID, errMsg)
+					status = "loading"
+				}
+			} else {
+				_, _ = io.Copy(io.Discard, resp.Body)
+				_ = resp.Body.Close()
+
+				switch resp.StatusCode {
+				case http.StatusOK:
+					status = "running"
+				case http.StatusServiceUnavailable:
+					if logMgr != nil {
+						errMsg = extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
 					}
-					m.saveInstances()
+					if isFatalLogMessage(errMsg) {
+						status = "error"
+						pid = 0
+					} else {
+						status = "loading"
+					}
+				default:
+					if logMgr != nil {
+						errMsg = extractErrorMessage(logMgr.GetRecentLogs(inst.ID, 50))
+					}
+					status = "error"
+					pid = 0
+				}
+			}
+
+			if status == "" {
+				continue
+			}
+			if m.setInstanceState(inst.ID, status, pid, false) && wsMgr != nil {
+				wsMgr.BroadcastInstanceStatus(inst.ID, status)
+				if status == "error" && errMsg != "" {
+					wsMgr.BroadcastInstanceError(inst.ID, errMsg)
 				}
 			}
 		}
-		m.mu.Unlock()
 	}
+}
+
+func isFatalLogMessage(errMsg string) bool {
+	lowerErr := strings.ToLower(errMsg)
+	return strings.Contains(lowerErr, "failed") ||
+		strings.Contains(lowerErr, "error") ||
+		strings.Contains(lowerErr, "out of memory") ||
+		strings.Contains(lowerErr, "cuda") ||
+		strings.Contains(lowerErr, "abort") ||
+		strings.Contains(lowerErr, "cannot") ||
+		strings.Contains(lowerErr, "panic")
 }
 
 // parseOutput 解析llama-server输出并实时推送状态
 func (m *Manager) parseOutput(instanceID string, stdout io.ReadCloser, logFile *os.File) {
+	defer stdout.Close()
+
 	scanner := bufio.NewScanner(stdout)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
 
 		// 写入日志文件
-		logFile.WriteString(line + "\n")
-		logFile.Sync()
+		_, _ = logFile.WriteString(line + "\n")
+		_ = logFile.Sync()
 
 		// 解析进度信息并推送
 		progress, msg := m.parseLine(line)
@@ -537,20 +739,6 @@ func (m *Manager) parseOutput(instanceID string, stdout io.ReadCloser, logFile *
 			m.wsManager.BroadcastLog(instanceID, line)
 		}
 	}
-
-	logFile.Close()
-	stdout.Close()
-
-	// 检查进程是否退出
-	m.mu.Lock()
-	if inst, ok := m.instances[instanceID]; ok && inst.Status == "running" {
-		inst.Status = "stopped"
-		m.saveInstances()
-		if m.wsManager != nil {
-			m.wsManager.BroadcastInstanceStatus(instanceID, "stopped")
-		}
-	}
-	m.mu.Unlock()
 }
 
 // parseLine 解析单行输出，返回状态信息
