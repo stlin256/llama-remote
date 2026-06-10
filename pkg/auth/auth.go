@@ -1,10 +1,13 @@
 package auth
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/llama-remote/server/pkg/config"
@@ -17,11 +20,21 @@ const (
 )
 
 type Manager struct {
-	cfg *config.Config
+	cfg      *config.Config
+	mu       sync.Mutex
+	sessions map[string]session
+}
+
+type session struct {
+	ExpiresAt    time.Time
+	PasswordHash string
 }
 
 func NewManager(cfg *config.Config) *Manager {
-	return &Manager{cfg: cfg}
+	return &Manager{
+		cfg:      cfg,
+		sessions: make(map[string]session),
+	}
 }
 
 func (m *Manager) IsEnabled() bool {
@@ -40,29 +53,82 @@ func (m *Manager) ValidatePassword(password string) bool {
 	if m.cfg.Auth.Password == "" {
 		return true // No password configured, allow all
 	}
-	return m.hashPassword(password) == m.hashPassword(m.cfg.Auth.Password)
+	return subtle.ConstantTimeCompare(
+		[]byte(m.hashPassword(password)),
+		[]byte(m.currentPasswordHash()),
+	) == 1
+}
+
+func (m *Manager) currentPasswordHash() string {
+	return m.hashPassword(m.cfg.Auth.Password)
+}
+
+func (m *Manager) newSession() (string, error) {
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", err
+	}
+	token := hex.EncodeToString(tokenBytes)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.cleanupExpiredLocked(time.Now())
+	m.sessions[token] = session{
+		ExpiresAt:    time.Now().Add(SessionLength),
+		PasswordHash: m.currentPasswordHash(),
+	}
+	return token, nil
+}
+
+func (m *Manager) deleteSession(token string) {
+	if token == "" {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.sessions, token)
+}
+
+func (m *Manager) cleanupExpiredLocked(now time.Time) {
+	for token, sess := range m.sessions {
+		if now.After(sess.ExpiresAt) {
+			delete(m.sessions, token)
+		}
+	}
+}
+
+func (m *Manager) ValidateRequest(r *http.Request) bool {
+	if !m.IsEnabled() {
+		return true
+	}
+
+	cookie, err := r.Cookie(CookieName)
+	if err != nil || cookie.Value == "" {
+		return false
+	}
+
+	now := time.Now()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.cleanupExpiredLocked(now)
+	sess, ok := m.sessions[cookie.Value]
+	if !ok {
+		return false
+	}
+	if sess.PasswordHash != m.currentPasswordHash() {
+		delete(m.sessions, cookie.Value)
+		return false
+	}
+	if now.After(sess.ExpiresAt) {
+		delete(m.sessions, cookie.Value)
+		return false
+	}
+	return true
 }
 
 // Middleware returns a handler that checks authentication
 func (m *Manager) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip auth check if auth is disabled
-		if !m.IsEnabled() {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		// Check for valid session cookie
-		cookie, err := r.Cookie(CookieName)
-		if err != nil || cookie.Value == "" {
-			// No valid cookie, return 401
-			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-			return
-		}
-
-		// Validate session (simple hash of password + timestamp)
-		expectedValue := m.hashPassword(m.cfg.Auth.Password + "session")
-		if cookie.Value != expectedValue {
+		if !m.ValidateRequest(r) {
 			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 			return
 		}
@@ -87,15 +153,19 @@ func (m *Manager) HandleLogin() http.HandlerFunc {
 			return
 		}
 
-		// Create session cookie
-		sessionValue := m.hashPassword(m.cfg.Auth.Password + "session")
+		sessionValue, err := m.newSession()
+		if err != nil {
+			http.Error(w, `{"error":"failed to create session"}`, http.StatusInternalServerError)
+			return
+		}
 		cookie := &http.Cookie{
 			Name:     CookieName,
 			Value:    sessionValue,
 			Path:     "/",
 			MaxAge:   int(CookieMaxAge.Seconds()),
 			HttpOnly: true,
-			// Secure:   true, // Enable in production with HTTPS
+			SameSite: http.SameSiteLaxMode,
+			Secure:   r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https",
 		}
 		http.SetCookie(w, cookie)
 
@@ -107,12 +177,18 @@ func (m *Manager) HandleLogin() http.HandlerFunc {
 // HandleLogout handles logout requests
 func (m *Manager) HandleLogout() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if cookie, err := r.Cookie(CookieName); err == nil {
+			m.deleteSession(cookie.Value)
+		}
+
 		// Clear session cookie
 		cookie := &http.Cookie{
-			Name:   CookieName,
-			Value:  "",
-			Path:   "/",
-			MaxAge: -1,
+			Name:     CookieName,
+			Value:    "",
+			Path:     "/",
+			MaxAge:   -1,
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
 		}
 		http.SetCookie(w, cookie)
 
@@ -124,25 +200,7 @@ func (m *Manager) HandleLogout() http.HandlerFunc {
 // HandleCheck checks if user is authenticated
 func (m *Manager) HandleCheck() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// If auth is disabled, always return authenticated
-		if !m.IsEnabled() {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]bool{"authenticated": true})
-			return
-		}
-
-		// Check for valid session cookie
-		cookie, err := r.Cookie(CookieName)
-		if err != nil || cookie.Value == "" {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]bool{"authenticated": false})
-			return
-		}
-
-		expectedValue := m.hashPassword(m.cfg.Auth.Password + "session")
-		authenticated := cookie.Value == expectedValue
-
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]bool{"authenticated": authenticated})
+		json.NewEncoder(w).Encode(map[string]bool{"authenticated": m.ValidateRequest(r)})
 	}
 }

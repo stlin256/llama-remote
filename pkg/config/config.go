@@ -9,11 +9,11 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Paths    PathsConfig    `yaml:"paths"`
-	Auth     AuthConfig     `yaml:"auth"`
-	DataDir  string         `yaml:"-"`
-	LogDir   string         `yaml:"-"`
+	Server  ServerConfig `yaml:"server"`
+	Paths   PathsConfig  `yaml:"paths"`
+	Auth    AuthConfig   `yaml:"auth"`
+	DataDir string       `yaml:"-"`
+	LogDir  string       `yaml:"-"`
 }
 
 type ServerConfig struct {
@@ -22,7 +22,7 @@ type ServerConfig struct {
 }
 
 type PathsConfig struct {
-	LlamaBin string `yaml:"llama_bin"`
+	LlamaBin  string `yaml:"llama_bin"`
 	ModelsDir string `yaml:"models_dir"`
 }
 
@@ -37,11 +37,11 @@ func DefaultConfig() *Config {
 
 	return &Config{
 		Server: ServerConfig{
-			Host: "0.0.0.0",
+			Host: "127.0.0.1",
 			Port: 8000,
 		},
 		Paths: PathsConfig{
-			LlamaBin: "",
+			LlamaBin:  "",
 			ModelsDir: filepath.Join(homeDir, "models"),
 		},
 		Auth: AuthConfig{
@@ -56,7 +56,7 @@ func DefaultConfig() *Config {
 func (c *Config) EnsureDataDir() error {
 	dirs := []string{c.DataDir, c.LogDir}
 	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0700); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
@@ -69,7 +69,7 @@ func (c *Config) Save() error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
-	return os.WriteFile(configPath, data, 0644)
+	return os.WriteFile(configPath, data, 0600)
 }
 
 func Load() (*Config, error) {

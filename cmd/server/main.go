@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -52,8 +53,11 @@ func main() {
 	logManager := logs.NewManager(cfg.LogDir)
 	defer logManager.Close()
 
+	// 初始化认证管理器
+	authMgr := auth.NewManager(cfg)
+
 	// 初始化WebSocket管理器
-	wsMgr := websocket.NewManager()
+	wsMgr := websocket.NewManager(authMgr)
 
 	// 初始化实例管理器
 	instanceMgr := instance.NewManager(cfg, logManager, wsMgr)
@@ -73,9 +77,6 @@ func main() {
 
 	// 初始化模型扫描器
 	modelScanner := models.NewScanner(cfg.Paths.ModelsDir)
-
-	// 初始化认证管理器
-	authMgr := auth.NewManager(cfg)
 
 	// 初始化聊天管理器
 	chatMgr := chat.NewManager(instanceMgr)
@@ -196,18 +197,25 @@ func main() {
 		w.Write(data)
 	})
 
-	// CORS
-	cors := handlers.CORS(
-		handlers.AllowedOrigins([]string{"*"}),
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
-	)
-
 	// 创建服务器
 	serverPort := cfg.Server.Port
 	if *port > 0 {
 		serverPort = *port
 	}
+
+	// CORS
+	cors := handlers.CORS(
+		handlers.AllowedOriginValidator(func(origin string) bool {
+			if origin == "" {
+				return true
+			}
+			parsed, err := url.Parse(origin)
+			return err == nil && parsed.Host == fmt.Sprintf("%s:%d", cfg.Server.Host, serverPort)
+		}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"Content-Type"}),
+	)
+
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, serverPort)
 	server := &http.Server{
 		Addr:         addr,

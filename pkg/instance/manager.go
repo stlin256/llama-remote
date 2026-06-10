@@ -233,7 +233,7 @@ func (m *Manager) Start(id string) error {
 	if host, ok := inst.Params["host"].(string); ok && host != "" {
 		args = append(args, "--host", host)
 	} else {
-		args = append(args, "--host", "0.0.0.0")
+		args = append(args, "--host", "127.0.0.1")
 	}
 
 	if ngl, ok := inst.Params["ngl"].(float64); ok {

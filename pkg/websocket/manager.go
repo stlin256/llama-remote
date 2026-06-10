@@ -4,17 +4,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"sync"
 
 	"github.com/gorilla/websocket"
+	"github.com/llama-remote/server/pkg/auth"
 	"github.com/llama-remote/server/pkg/gpu"
 )
-
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
 
 type Message struct {
 	Type    string      `json:"type"`
@@ -22,18 +18,28 @@ type Message struct {
 }
 
 type Manager struct {
-	clients map[*websocket.Conn]bool
-	mu      sync.RWMutex
+	authenticator *auth.Manager
+	upgrader      websocket.Upgrader
+	clients       map[*websocket.Conn]bool
+	mu            sync.RWMutex
 }
 
-func NewManager() *Manager {
-	return &Manager{
-		clients: make(map[*websocket.Conn]bool),
+func NewManager(authenticator *auth.Manager) *Manager {
+	manager := &Manager{
+		authenticator: authenticator,
+		clients:       make(map[*websocket.Conn]bool),
 	}
+	manager.upgrader.CheckOrigin = manager.checkOrigin
+	return manager
 }
 
 func (m *Manager) Handle(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+	if m.authenticator != nil && !m.authenticator.ValidateRequest(r) {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	conn, err := m.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("WebSocket upgrade error: %v", err)
 		return
@@ -57,6 +63,18 @@ func (m *Manager) Handle(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+}
+
+func (m *Manager) checkOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	parsed, err := url.Parse(origin)
+	if err != nil || parsed.Host == "" {
+		return false
+	}
+	return parsed.Host == r.Host
 }
 
 func (m *Manager) Broadcast(msg Message) {
@@ -117,7 +135,7 @@ func (m *Manager) BroadcastInstanceProgress(instanceID, progress, message string
 	m.Broadcast(Message{
 		Type: "instance_progress",
 		Payload: map[string]string{
-			"id":      instanceID,
+			"id":       instanceID,
 			"progress": progress,
 			"message":  message,
 		},

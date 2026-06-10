@@ -13,7 +13,7 @@ import { formatSize, DEFAULT_PROMPT_TEMPLATE, DEFAULT_GPU_LAYERS, DEFAULT_CONTEX
 const DEFAULT_PARAMS = {
   ngl: DEFAULT_GPU_LAYERS,
   context: DEFAULT_CONTEXT,
-  host: '0.0.0.0',
+  host: '127.0.0.1',
   port: DEFAULT_PORT,
   flash_attention: true,
 }
@@ -113,7 +113,7 @@ export default function Instances() {
     const sanitizedParams = {
       ngl: params.ngl === undefined ? defaultNgl : Math.max(0, Math.floor(Number(params.ngl) || defaultNgl)),
       context: params.context === undefined ? defaultContext : Math.max(1, Math.min(2147483647, Math.floor(Number(params.context) || defaultContext))),
-      host: params.host || '0.0.0.0',
+      host: params.host || '127.0.0.1',
       port: Math.max(1, Math.min(65535, Math.floor(Number(params.port) || 5000))),
       threads: params.threads ? Math.max(1, Math.floor(Number(params.threads))) : undefined,
       flash_attention: Boolean(params.flash_attention),

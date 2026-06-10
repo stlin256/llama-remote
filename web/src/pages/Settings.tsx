@@ -10,7 +10,7 @@ export default function Settings() {
   const { t } = useTranslation()
   const isMobile = useIsMobile()
   const [formData, setFormData] = useState({
-    host: '0.0.0.0',
+    host: '127.0.0.1',
     port: 8000,
     llama_bin: '',
     models_dir: '',
