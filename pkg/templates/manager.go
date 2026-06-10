@@ -2,11 +2,12 @@ package templates
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 
+	"github.com/gorilla/mux"
 	"gopkg.in/yaml.v3"
 )
 
@@ -54,6 +55,17 @@ func (m *Manager) save(templates []Template) error {
 	}
 
 	return os.WriteFile(m.filePath(), data, 0644)
+}
+
+func templateNameFromRequest(r *http.Request) string {
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		name = mux.Vars(r)["name"]
+	}
+	if decoded, err := url.QueryUnescape(name); err == nil {
+		name = decoded
+	}
+	return name
 }
 
 func (m *Manager) HandleList() http.HandlerFunc {
@@ -108,7 +120,7 @@ func (m *Manager) HandleSave() http.HandlerFunc {
 
 func (m *Manager) HandleDelete() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		name := r.URL.Query().Get("name")
+		name := templateNameFromRequest(r)
 		if name == "" {
 			http.Error(w, "name required", 400)
 			return
@@ -135,8 +147,4 @@ func (m *Manager) HandleDelete() http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	}
-}
-
-func init() {
-	_ = fmt.Sprintf("")
 }

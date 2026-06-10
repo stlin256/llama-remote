@@ -134,6 +134,7 @@ func main() {
 	// 模板API
 	api.HandleFunc("/templates", templateMgr.HandleList()).Methods("GET")
 	api.HandleFunc("/templates", templateMgr.HandleSave()).Methods("POST")
+	api.HandleFunc("/templates", templateMgr.HandleDelete()).Methods("DELETE")
 	api.HandleFunc("/templates/{name}", templateMgr.HandleDelete()).Methods("DELETE")
 
 	// 提示词模板API
