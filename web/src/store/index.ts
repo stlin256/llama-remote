@@ -11,6 +11,27 @@ function getInitialLanguage(): 'zh' | 'en' {
   return getBrowserLanguage()
 }
 
+function shouldKeepProgress(status: Instance['status']): boolean {
+  return status === 'starting' || status === 'loading'
+}
+
+function nextInstanceErrors(instances: Instance[], errors: Record<string, string>): Record<string, string> {
+  const instanceById = new Map(instances.map((instance) => [instance.id, instance]))
+  return Object.fromEntries(
+    Object.entries(errors).filter(([id]) => instanceById.get(id)?.status === 'error')
+  )
+}
+
+function nextInstanceProgress(instances: Instance[], progress: Record<string, { progress: string; message: string }>): Record<string, { progress: string; message: string }> {
+  const instanceById = new Map(instances.map((instance) => [instance.id, instance]))
+  return Object.fromEntries(
+    Object.entries(progress).filter(([id]) => {
+      const instance = instanceById.get(id)
+      return instance ? shouldKeepProgress(instance.status) : false
+    })
+  )
+}
+
 interface AppState {
   // 配置
   config: Config | null
@@ -35,6 +56,7 @@ interface AppState {
   // 实例错误信息
   instanceErrors: Record<string, string>
   setInstanceError: (id: string, error: string) => void
+  clearInstanceError: (id: string) => void
 
   // 模型
   models: ModelInfo[]
@@ -66,6 +88,7 @@ interface AppState {
   // 实例加载进度
   instanceProgress: Record<string, { progress: string; message: string }>
   setInstanceProgress: (id: string, progress: string, message: string) => void
+  clearInstanceProgress: (id: string) => void
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -86,23 +109,50 @@ export const useStore = create<AppState>((set) => ({
 
   // 实例
   instances: [],
-  setInstances: (instances) => set({ instances }),
-  addInstance: (instance) => set((state) => ({ instances: [...state.instances, instance] })),
-  updateInstance: (id, updates) => set((state) => ({
-    instances: state.instances.map((i) => i.id === id ? { ...i, ...updates } : i)
+  setInstances: (instances) => set((state) => ({
+    instances,
+    instanceErrors: nextInstanceErrors(instances, state.instanceErrors),
+    instanceProgress: nextInstanceProgress(instances, state.instanceProgress),
   })),
+  addInstance: (instance) => set((state) => ({ instances: [...state.instances, instance] })),
+  updateInstance: (id, updates) => set((state) => {
+    const instances = state.instances.map((i) => i.id === id ? { ...i, ...updates } : i)
+    if (!updates.status) {
+      return { instances }
+    }
+    const status = updates.status
+    return {
+      instances,
+      instanceErrors: status === 'error'
+        ? state.instanceErrors
+        : Object.fromEntries(Object.entries(state.instanceErrors).filter(([key]) => key !== id)),
+      instanceProgress: shouldKeepProgress(status)
+        ? state.instanceProgress
+        : Object.fromEntries(Object.entries(state.instanceProgress).filter(([key]) => key !== id)),
+    }
+  }),
   updateInstanceStatus: (id, status) => set((state) => ({
-    instances: state.instances.map((i) => i.id === id ? { ...i, status: status as Instance['status'] } : i)
+    instances: state.instances.map((i) => i.id === id ? { ...i, status: status as Instance['status'] } : i),
+    instanceErrors: status === 'error'
+      ? state.instanceErrors
+      : Object.fromEntries(Object.entries(state.instanceErrors).filter(([key]) => key !== id)),
+    instanceProgress: shouldKeepProgress(status as Instance['status'])
+      ? state.instanceProgress
+      : Object.fromEntries(Object.entries(state.instanceProgress).filter(([key]) => key !== id)),
   })),
   removeInstance: (id) => set((state) => ({
     instances: state.instances.filter((i) => i.id !== id),
-    instanceErrors: Object.fromEntries(Object.entries(state.instanceErrors).filter(([key]) => key !== id))
+    instanceErrors: Object.fromEntries(Object.entries(state.instanceErrors).filter(([key]) => key !== id)),
+    instanceProgress: Object.fromEntries(Object.entries(state.instanceProgress).filter(([key]) => key !== id)),
   })),
 
   // 实例错误信息
   instanceErrors: {},
   setInstanceError: (id, error) => set((state) => ({
     instanceErrors: { ...state.instanceErrors, [id]: error }
+  })),
+  clearInstanceError: (id) => set((state) => ({
+    instanceErrors: Object.fromEntries(Object.entries(state.instanceErrors).filter(([key]) => key !== id))
   })),
 
   // 模型
@@ -138,5 +188,8 @@ export const useStore = create<AppState>((set) => ({
   instanceProgress: {},
   setInstanceProgress: (id, progress, message) => set((state) => ({
     instanceProgress: { ...state.instanceProgress, [id]: { progress, message } }
+  })),
+  clearInstanceProgress: (id) => set((state) => ({
+    instanceProgress: Object.fromEntries(Object.entries(state.instanceProgress).filter(([key]) => key !== id))
   })),
 }))

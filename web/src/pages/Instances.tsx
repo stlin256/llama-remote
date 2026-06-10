@@ -18,6 +18,8 @@ const DEFAULT_PARAMS = {
   flash_attention: true,
 }
 
+const isActiveStatus = (status: Instance['status']) => status === 'running' || status === 'starting' || status === 'loading'
+
 export default function Instances() {
   const { instances, models, prompts, addInstance, updateInstance, removeInstance, instanceProgress, instanceErrors } = useStore()
   const { t } = useTranslation()
@@ -39,6 +41,7 @@ export default function Instances() {
     switch (status) {
       case 'running': return t('running')
       case 'starting': return t('loading')
+      case 'loading': return t('loading')
       case 'stopped': return t('stopped')
       case 'error': return t('crashed')
       default: return status
@@ -132,8 +135,10 @@ export default function Instances() {
         if (editingInstance.status === 'running') {
           if (await confirm(t('instanceRunningRestart'))) {
             await api.stopInstance(editingInstance.id)
-            await api.startInstance(editingInstance.id)
+            updateInstance(editingInstance.id, { status: 'stopped' })
             updateInstance(editingInstance.id, { status: 'starting' })
+            await api.startInstance(editingInstance.id)
+            updateInstance(editingInstance.id, { status: 'loading' })
           }
         }
       } else {
@@ -142,8 +147,9 @@ export default function Instances() {
         setShowModal(false)
         // Ask to start the new instance
         if (await confirm(t('instanceCreatedStart'))) {
-          await api.startInstance(created.id)
           updateInstance(created.id, { status: 'starting' })
+          await api.startInstance(created.id)
+          updateInstance(created.id, { status: 'loading' })
         }
         return
       }
@@ -167,7 +173,7 @@ export default function Instances() {
     try {
       updateInstance(id, { status: 'starting' })
       await api.startInstance(id)
-      updateInstance(id, { status: 'running' })
+      updateInstance(id, { status: 'loading' })
     } catch (e) {
       updateInstance(id, { status: 'error' })
       await showError(`${t('startFailed')}: ${e}`)
@@ -261,7 +267,7 @@ export default function Instances() {
                   </td>
                   <td style={{ padding: '4px 8px', border: '1px solid var(--win-gray-dark)' }}>
                     <div className="flex gap-1">
-                      {instance.status === 'running' || instance.status === 'starting' ? (
+                      {isActiveStatus(instance.status) ? (
                         <button onClick={() => handleStop(instance.id)} className="btn" style={{ padding: '2px 6px', minWidth: 'auto' }}>
                           <Square size={10} />
                         </button>
